@@ -52,7 +52,7 @@ Once the website is up and running, you can interact with it as follows:
 
 ### Live Demo
 
-You can also check out the live demo of the 4is10 Solver Website at [your live demo link](http://example.com).
+You can also check out the live demo of the 4is10 Solver Website at [my website](https://mathematicscalculator.com).
 
 ## Contributing
 
@@ -81,7 +81,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 If you have any questions, suggestions, or feedback, feel free to reach out to us:
 
-- Email: your.email@example.com
-- GitHub: [yourusername](https://github.com/yourusername)
+- Email: graff.mathis@gmail.com
+- GitHub: [MGRAFF2006](https://github.com/MGRAFF2006)
 
 We hope you enjoy using the 4is10 Solver Website. Happy solving!
