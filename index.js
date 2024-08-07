@@ -11,6 +11,13 @@ let parens = true
 let curTrans
 
 // solve for given combination
+/**
+ * Solves a mathematical equation to find the closest solution to 10.
+ * 
+ * @param {number} num - The number to be used in the equation.
+ * @returns {string} - The solution to the equation or a message indicating no solution was found.
+ */
+
 let solve = (num) => {
 
     let nums = num.toString().split("")
