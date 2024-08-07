@@ -23,7 +23,7 @@ The "4 is 10" puzzle is a mathematical challenge that involves using a series of
 - Responsive design for various devices.
 - Easy to navigate and use.
 
-## Installation
+## Setup locally (Installation)
 
 To set up the 4is10 Solver Website locally, follow these steps:
 
