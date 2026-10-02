@@ -1,87 +1,44 @@
-# 4is10 Solver Website
+# 4=10 solver
 
-Welcome to the 4is10 Solver Website! This repository contains the source code for the 4is10 Solver website, an interactive interface for solving the "4 is 10" mathematical puzzle.
+**Four digits. Make ten.** A small browser app for the *4=10* arithmetic puzzle: use all four numbers with addition, subtraction, multiplication, division, and parentheses to reach 10.
 
-## Table of Contents
+```text
+5   5   5   5  →  5 + 5 + 5 − 5 = 10
+```
 
-- [Introduction](#introduction)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+Drag the digit wheels with your mouse or finger. Toggle operators or parentheses to change the search, then press **solve**. If the search finds no exact match, it shows the closest expression it tried.
 
-## Introduction
+## Run locally
 
-The "4 is 10" puzzle is a mathematical challenge that involves using a series of operations on four different numbers to achieve the result of 10. This website offers an intuitive interface to explore various solutions to this puzzle.
+No package installation or build step is needed. Serve the checkout with a static web server:
 
-## Features
+```bash
+git clone https://github.com/MGRAFF2006/4is10-solver.git
+cd 4is10-solver
+python -m http.server 8000
+```
 
-- Interactive web interface to solve the "4 is 10" puzzle.
-- Real-time display of operations and results.
-- Responsive design for various devices.
-- Easy to navigate and use.
+Open <http://localhost:8000>.
 
-## Setup locally (Installation)
+## How it works
 
-To set up the 4is10 Solver Website locally, follow these steps:
+The solver tries permutations of the four digits, combinations of the enabled operators, and several parenthesis placements. A bundled copy of **math.js** evaluates each expression. The first exact match wins; otherwise the closest evaluated result is displayed.
 
-1. **Clone the repository:**
-    ```bash
-    git clone https://github.com/yourusername/4is10-solver-website.git
-    cd 4is10-solver-website
-    ```
+This is a small experiment rather than an exhaustive symbolic solver: the inputs are single digits and the search uses the parenthesis patterns implemented in the source.
 
-2. **Run a web server in the directory:**
-    You can use Python's built-in HTTP server or any other web server of your choice. For Python, use:
-    ```bash
-    python -m http.server
-    ```
+| File | Role |
+| :--- | :--- |
+| `index.html` | Digit wheels and operator controls |
+| `src/js/index.js` | Search algorithm and mouse/touch interaction |
+| `src/js/mathjs/math.min.js` | Bundled expression evaluator |
+| `src/css/index.css` | Layout and styling |
 
-3. **Open your web browser:**
-    Navigate to `http://localhost:8000` (or the appropriate port if different) to view the website.
+For JavaScript edits, a quick syntax check is:
 
-## Usage
-
-Once the website is up and running, you can interact with it as follows:
-
-1. Open your web browser and navigate to `http://localhost:8000`.
-2. Enter the desired operations on the four numbers provided.
-3. View the results and steps to see how the numbers are manipulated to achieve the result of 10.
-
-### Live Demo
-
-You can also check out the live demo of the 4is10 Solver Website at [my website](https://mathematicscalculator.com).
-
-## Contributing
-
-We welcome contributions to the 4is10 Solver Website! If you would like to contribute, please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix:
-    ```bash
-    git checkout -b feature-name
-    ```
-3. Commit your changes:
-    ```bash
-    git commit -m "Description of your changes"
-    ```
-4. Push to your branch:
-    ```bash
-    git push origin feature-name
-    ```
-5. Create a pull request explaining your changes.
+```bash
+node --check src/js/index.js
+```
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
-## Contact
-
-If you have any questions, suggestions, or feedback, feel free to reach out to us:
-
-- Email: graff.mathis@gmail.com
-- GitHub: [MGRAFF2006](https://github.com/MGRAFF2006)
-
-We hope you enjoy using the 4is10 Solver Website. Happy solving!
+[MIT](LICENSE).
