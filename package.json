@@ -1,0 +1,20 @@
+{
+  "name": "4is10-solver",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "wrangler dev --ip 127.0.0.1 --port 8787",
+    "test": "node --test tests/solver.test.mjs",
+    "test:browser": "playwright test",
+    "check": "node --check src/js/index.js && node --check src/js/solver.mjs && npm test",
+    "deploy:check": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy"
+  },
+  "engines": { "node": ">=22" },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "wrangler": "4.147.0"
+  }
+}

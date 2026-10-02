@@ -1,37 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="src/css/index.css">
-        <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap" rel="stylesheet">
-        <link rel="icon" type="image/png" sizes="32x32" href="favicon/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="favicon/favicon-16x16.png">
-        <title>4=10 solver</title>
-        <script src="src/js/index.js" defer></script>
-        <script src="src/js/mathjs/math.min.js" integrity="sha512-B82WLflI1EQiR9sGbIV1ddGVvK4ghj1xjMShL7YvcOrHjX2qP72lHztT1DxBVPiz1aTR6mOUJbtwj06uadL2GA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    </head>    
-    <body>
-        <main id="container">
-            <div>
-                <p id="credits">Made by <a href="">Mathis Graff</a>. Code on <a href="https://github.com/MGRAFF2006/4is10-solver.git">GitHub</a>.</p>
-                <h1 id="name">4=10 solver</h1>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Four digits. One perfect ten. Find a solution to the 4=10 arithmetic puzzle with a fast, private, browser-based solver.">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="icon" type="image/svg+xml" href="src/favicon/icon.svg">
+  <link rel="stylesheet" href="src/css/index.css">
+  <script type="module" src="src/js/index.js"></script>
+  <title>4=10 — Make it add up.</title>
+</head>
+<body>
+  <a class="skip-link" href="#solver">Skip to solver</a>
+  <div class="page">
+    <header class="site-header">
+      <a class="wordmark" href="./" aria-label="4 equals 10 home">4<span>=</span>10<span class="wordmark-dot">.</span></a>
+      <nav aria-label="Main navigation"><a href="#how-it-works">The rules</a><a href="https://github.com/MGRAFF2006/4is10-solver" target="_blank" rel="noopener noreferrer">Source <span aria-hidden="true">↗</span></a></nav>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="heading">
+        <div><p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> A little arithmetic. A lot of possibilities.</p><h1 id="heading">Make it<br><span>add up.</span></h1></div>
+        <div class="intro-aside"><span class="edition">THE FOUR-NUMBER PUZZLE / 01</span><p>Four digits. One perfect ten.<br>Choose your numbers. We’ll find<br class="desktop-break"> the way to get there.</p><a class="text-link" href="#solver">Let’s solve it <span aria-hidden="true">↓</span></a></div>
+      </section>
+      <form id="solver" class="solver" aria-labelledby="solver-heading">
+        <div class="panel-heading"><h2 id="solver-heading"><span class="section-number">01 /</span> Your four digits</h2><button type="button" id="randomize" class="text-button">Shuffle <span aria-hidden="true">↗</span></button></div>
+        <div class="puzzle-layout">
+          <div class="puzzle-inputs">
+            <div id="digits" class="digits">
+              <div class="digit-card">
+                <button type="button" class="digit-step" data-step="1" aria-label="Increase first digit"><span aria-hidden="true">↑</span></button>
+                <label class="sr-only" for="digit-1">First digit</label><input id="digit-1" name="digit-1" class="digit-input" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" value="5" required autocomplete="off" aria-describedby="digit-hint">
+                <button type="button" class="digit-step" data-step="-1" aria-label="Decrease first digit"><span aria-hidden="true">↓</span></button><span class="digit-index" aria-hidden="true">01</span>
+              </div>
+              <div class="digit-card">
+                <button type="button" class="digit-step" data-step="1" aria-label="Increase second digit"><span aria-hidden="true">↑</span></button>
+                <label class="sr-only" for="digit-2">Second digit</label><input id="digit-2" name="digit-2" class="digit-input" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" value="5" required autocomplete="off" aria-describedby="digit-hint">
+                <button type="button" class="digit-step" data-step="-1" aria-label="Decrease second digit"><span aria-hidden="true">↓</span></button><span class="digit-index" aria-hidden="true">02</span>
+              </div>
+              <div class="digit-card">
+                <button type="button" class="digit-step" data-step="1" aria-label="Increase third digit"><span aria-hidden="true">↑</span></button>
+                <label class="sr-only" for="digit-3">Third digit</label><input id="digit-3" name="digit-3" class="digit-input" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" value="5" required autocomplete="off" aria-describedby="digit-hint">
+                <button type="button" class="digit-step" data-step="-1" aria-label="Decrease third digit"><span aria-hidden="true">↓</span></button><span class="digit-index" aria-hidden="true">03</span>
+              </div>
+              <div class="digit-card">
+                <button type="button" class="digit-step" data-step="1" aria-label="Increase fourth digit"><span aria-hidden="true">↑</span></button>
+                <label class="sr-only" for="digit-4">Fourth digit</label><input id="digit-4" name="digit-4" class="digit-input" type="text" inputmode="numeric" pattern="[0-9]" maxlength="1" value="5" required autocomplete="off" aria-describedby="digit-hint">
+                <button type="button" class="digit-step" data-step="-1" aria-label="Decrease fourth digit"><span aria-hidden="true">↓</span></button><span class="digit-index" aria-hidden="true">04</span>
+              </div>
             </div>
-            <h2 id="title">5+5+5-5=10</h2>
-            <div id="wrapper">
-                <div id="number_outer">
-                    <div class="overlay" id="overlay_top"></div>
-                        <div id="number_wrapper"></div>
-                            <div class="overlay" id="overlay_bottom"></div>
-                                <div id="operation_wrapper">
-                                    <span data-content="(">(</span><span data-content="+">+</span><span data-content="-">–</span><span data-content="*">×</span><span data-content="/">÷</span><span data-content="(">)</span>
-                                </div>
-                            </div>
-                            <button type="submit" id="button">solve</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </body>
+            <p id="digit-hint" class="hint">Drag up or down, use the arrows, or type a digit.</p>
+            <fieldset class="operations"><legend><span class="section-number">02 /</span> Allowed operations</legend><div class="operator-options">
+              <label class="operator"><input type="checkbox" name="operator" value="+" checked aria-label="Allow addition"><span aria-hidden="true">+</span></label>
+              <label class="operator"><input type="checkbox" name="operator" value="-" checked aria-label="Allow subtraction"><span aria-hidden="true">−</span></label>
+              <label class="operator"><input type="checkbox" name="operator" value="*" checked aria-label="Allow multiplication"><span aria-hidden="true">×</span></label>
+              <label class="operator"><input type="checkbox" name="operator" value="/" checked aria-label="Allow division"><span aria-hidden="true">÷</span></label>
+              <label class="operator parentheses"><input type="checkbox" id="parentheses" checked aria-label="Allow parentheses"><span aria-hidden="true">( )</span></label>
+            </div></fieldset>
+            <button type="submit" class="solve-button">Find a solution <span aria-hidden="true">↗</span></button>
+          </div>
+          <section class="result-panel" aria-labelledby="result-heading" aria-live="polite" aria-atomic="true">
+            <div class="result-topline"><h2 id="result-heading">The result</h2><span id="result-status" class="result-status">Ready to solve</span></div>
+            <div class="result-body"><span class="result-mark" aria-hidden="true">=</span><p id="expression" class="expression">Your equation goes here.</p><p id="answer" class="answer">?<span class="answer-dot">.</span></p></div>
+            <p id="result-note" class="result-note">All four digits. Every one used exactly once.</p>
+          </section>
+        </div>
+        <noscript><p class="noscript">Enable JavaScript to run the solver. All calculations stay in your browser.</p></noscript>
+      </form>
+      <section id="how-it-works" class="rules" aria-labelledby="rules-heading">
+        <div class="rules-heading"><p class="eyebrow">SIMPLE RULES. SATISFYING ANSWERS.</p><h2 id="rules-heading">A small puzzle.<br>An elegant solution.</h2></div>
+        <ol>
+          <li><span class="rule-index" aria-hidden="true">01</span><div><h3>Pick four digits.</h3><p>Any digit from 0 to 9. Repeats welcome. Use each one exactly once.</p></div></li>
+          <li><span class="rule-index" aria-hidden="true">02</span><div><h3>Set your rules.</h3><p>Choose the operations. Keep parentheses on for more possibilities.</p></div></li>
+          <li><span class="rule-index" aria-hidden="true">03</span><div><h3>Meet your ten.</h3><p>We try every order and grouping. If ten isn’t possible, see the closest result.</p></div></li>
+        </ol>
+      </section>
+    </main>
+    <footer class="site-footer"><p>Made by <a href="https://github.com/MGRAFF2006">Mathis Graff</a>.</p><p><span class="status-dot" aria-hidden="true"></span> Runs in your browser. Nothing sent to a server.</p><a href="#heading">Back to top <span aria-hidden="true">↑</span></a></footer>
+  </div>
+</body>
 </html>

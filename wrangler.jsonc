@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "4is10-solver",
+  "compatibility_date": "2026-10-02",
+  "workers_dev": true,
+  "build": {
+    "command": "npm run build",
+    "watch_dir": ["index.html", "404.html", "_headers", "src"]
+  },
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "404-page"
+  }
+}
