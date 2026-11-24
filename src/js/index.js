@@ -37,7 +37,7 @@ function showSolution() {
     note.textContent = valid && operators.length
       ? "Every expression with these settings divides by zero. Try another operation."
       : "Change your settings and we’ll try again.";
-    return `Check your inputs. ${expression.textContent}`;
+    return `Check your inputs. ${expression.textContent} ${note.textContent}`;
   }
   panel.dataset.state = result.exact ? "exact" : "closest";
   status.textContent = result.exact ? "Exact match" : "Closest result";

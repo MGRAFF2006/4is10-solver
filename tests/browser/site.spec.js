@@ -73,8 +73,11 @@ test("Cloudflare serves security headers and hides repository files", async ({ r
 });
 
 test("screen readers hear one summary after the digits settle", async ({ page }) => {
+  // Paused fake time makes the 600 ms settling delay deterministic.
+  await page.clock.install({ time: new Date("2026-01-01T08:00:00") });
   await page.goto("/");
-  // A single live region, empty on load, so the result panel's own changes stay silent.
+  await page.clock.pauseAt(new Date("2026-01-01T09:00:00"));
+  // A single live region, silent on load, so the result panel's own changes stay quiet.
   await expect(page.locator("[aria-live], [role='status'], [role='alert']")).toHaveCount(1);
   const status = page.getByRole("status");
   await expect(status).toHaveText("");
@@ -86,10 +89,17 @@ test("screen readers hear one summary after the digits settle", async ({ page })
   const digit = page.locator("#digit-1");
   for (let step = 0; step < 4; step++) await digit.press("ArrowUp");
   await expect(digit).toHaveValue("9");
-  await expect(status).toHaveText(/^Exact match: .* equals 10\.$/);
-  await expect(status).not.toContainText(/[−×÷]/);
-  await page.waitForTimeout(800);
+  await page.clock.runFor(599);
+  expect(await page.evaluate(() => window.announcements)).toEqual([]);
+  await page.clock.runFor(1);
   expect(await page.evaluate(() => window.announcements)).toHaveLength(1);
-  await page.getByRole("checkbox", { name: "Allow parentheses" }).uncheck();
-  await expect(status).toHaveText(/^Closest result: .* off by \d/);
+  // Spoken words instead of symbols, which screen readers read inconsistently.
+  await expect(status).toHaveText(/^Exact match: [0-9a-z ]+ equals 10\.$/);
+
+  // Invalid settings keep the explanation and the way out.
+  await page.locator("#digit-1").fill("0");
+  for (const index of [2, 3, 4]) await page.locator(`#digit-${index}`).fill("0");
+  for (const name of ["addition", "subtraction", "multiplication"]) await page.getByRole("checkbox", { name: `Allow ${name}` }).uncheck();
+  await page.clock.runFor(600);
+  await expect(status).toHaveText("Check your inputs. No defined result. Every expression with these settings divides by zero. Try another operation.");
 });
