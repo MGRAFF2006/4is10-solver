@@ -273,3 +273,20 @@ test("on a fresh page, puzzle mode reaches the address even while a digit is mis
   await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
   await expect(page).toHaveURL(/#digits=5555&ops=asmd&parens=on&mode=puzzle$/);
 });
+
+test("the puzzle cannot be changed before the script is ready", async ({ page }) => {
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  await page.route("**/src/js/solver.mjs", async route => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/#digits=1158&ops=asmd&parens=on", { waitUntil: "commit" });
+  const layout = page.locator(".puzzle-layout");
+  await expect(layout).toHaveAttribute("inert", "");
+  await expect(page.locator("#hide-answer").click({ timeout: 1000 })).rejects.toThrow();
+  release();
+  await expect(layout).not.toHaveAttribute("inert");
+  await expect(page.locator("#hide-answer")).not.toBeChecked();
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+});

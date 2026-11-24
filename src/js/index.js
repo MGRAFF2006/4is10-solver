@@ -255,3 +255,5 @@ addEventListener("hashchange", () => {
 applyHash();
 const openingHash = puzzleHash();
 showSolution();
+// The controls stay inert until here, so nothing can change before puzzle mode protects it.
+document.querySelector(".puzzle-layout").inert = false;
