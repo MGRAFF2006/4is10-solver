@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { solve } from "../src/js/solver.mjs";
+import { allSolutions, solve } from "../src/js/solver.mjs";
 
 // Reads a displayed answer with the usual order of operations, independently of the solver.
 function evaluate(expression) {
@@ -131,6 +131,39 @@ test("matches an independent subset search and prints each answer correctly for 
       assert.equal(result.firstStep, shown.first, result.expression);
       for (const variant of withoutEachBracketPair(result.expression)) {
         assert.ok(!(Math.abs(evaluate(variant).value - result.value) < 1e-9), `${result.expression} → ${variant}`);
+      }
+    }
+  }
+});
+
+test("lists each distinct solution once", () => {
+  // Reordering and regrouping terms or factors is the same solution.
+  assert.deepEqual(allSolutions([1, 2, 3, 4], ["+"]), ["1 + 2 + 3 + 4"]);
+  assert.deepEqual(allSolutions([5, 5, 5, 5]), ["5 + 5 + 5 − 5", "5 + 5 × 5 ÷ 5", "5 ÷ 5 × (5 + 5)"]);
+  // Dividing by one is multiplying by one, and subtracting zero is adding zero,
+  // also when the one or zero is worked out: "2 × 5 − 0 × 9" is "0 × 9 + 2 × 5".
+  assert.deepEqual(allSolutions([1, 1, 2, 5], ["*", "/"]), ["1 × 1 × 2 × 5"]);
+  assert.deepEqual(allSolutions([0, 2, 5, 9], ["+", "-", "*"]), ["0 × 9 + 2 × 5", "(0 × 9 + 2) × 5", "(0 × 9 + 5) × 2"]);
+  // "(5 + 5) ÷ (2 − 1)" is "(2 − 1) × (5 + 5)".
+  assert.equal(allSolutions([1, 2, 5, 5]).filter(expression => expression.includes("(5 + 5)")).length, 1);
+  assert.deepEqual(allSolutions([1, 1, 1, 1]), []);
+  assert.deepEqual(allSolutions([5, 5, 5, 5], []), []);
+  assert.throws(() => allSolutions([1, 2, 3]), TypeError);
+});
+
+test("every listed solution makes ten with the chosen rules, for all 715 combinations", () => {
+  for (let a = 0; a <= 9; a++) for (let b = a; b <= 9; b++) {
+    for (let c = b; c <= 9; c++) for (let d = c; d <= 9; d++) {
+      const digits = [a, b, c, d];
+      for (const parentheses of [true, false]) {
+        const solutions = allSolutions(digits, ["+", "-", "*", "/"], parentheses);
+        assert.equal(solutions.length > 0, solve(digits, undefined, parentheses).exact, `${digits} ${parentheses}`);
+        assert.equal(new Set(solutions).size, solutions.length, String(digits));
+        for (const expression of solutions) {
+          assert.ok(Math.abs(evaluate(expression).value - 10) < 1e-9, expression);
+          assert.deepEqual(expression.match(/\d/g).map(Number).sort(), digits, expression);
+          if (!parentheses) assert.ok(!expression.includes("("), expression);
+        }
       }
     }
   }

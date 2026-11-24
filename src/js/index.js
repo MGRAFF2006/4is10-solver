@@ -1,4 +1,4 @@
-import { solve } from "./solver.mjs";
+import { allSolutions, solve } from "./solver.mjs";
 
 const form = document.querySelector("#solver");
 const inputs = [...document.querySelectorAll(".digit-input")];
@@ -15,6 +15,9 @@ const hideBox = document.querySelector("#hide-answer");
 const puzzleActions = document.querySelector("#puzzle-actions");
 const hintButton = document.querySelector("#hint");
 const revealButton = document.querySelector("#reveal");
+const solutionsBox = document.querySelector("#all-solutions");
+const solutionsSummary = solutionsBox.querySelector("summary");
+const solutionsList = solutionsBox.querySelector("ol");
 // Short letters keep shared links readable; "+" would turn into a space in a query string.
 const operatorCodes = { "+": "a", "-": "s", "*": "m", "/": "d" };
 const formatter = new Intl.NumberFormat("en", { maximumSignificantDigits: 10 });
@@ -29,12 +32,19 @@ function spoken(text) {
 }
 
 
+function currentPuzzle() {
+  return [inputs.map(input => Number(input.value)), operatorBoxes.filter(box => box.checked).map(box => box.value),
+    parenthesesBox.checked];
+}
+
 function showSolution() {
   inputs.forEach(input => input.setAttribute("aria-invalid", String(!input.validity.valid)));
   const operators = operatorBoxes.filter(box => box.checked).map(box => box.value);
   const valid = inputs.every(input => input.validity.valid);
-  const result = valid ? solve(inputs.map(input => Number(input.value)), operators,
-    parenthesesBox.checked) : null;
+  const result = valid ? solve(...currentPuzzle()) : null;
+  // Listing every solution would give away a hidden answer, so remove it, not just hide it.
+  solutionsBox.hidden = !result?.exact || (hideBox.checked && !revealed);
+  if (solutionsBox.hidden) clearSolutions();
   if (!result) {
     panel.dataset.state = "invalid";
     status.textContent = "Check your inputs";
@@ -147,10 +157,17 @@ function update() {
   }, 600);
 }
 
+function clearSolutions() {
+  solutionsBox.open = false;
+  solutionsSummary.textContent = "Show all solutions";
+  solutionsList.replaceChildren();
+}
+
 // A new puzzle or new settings: hide the answer again if the visitor asked for that.
 function changed() {
   hinted = false;
   revealed = false;
+  clearSolutions();
   update();
 }
 
@@ -245,6 +262,17 @@ copyButton.addEventListener("click", async () => {
     : copied ? "Link to this puzzle copied." : "Copying failed. Copy the address from the address bar instead.";
   clearTimeout(copyReset);
   copyReset = setTimeout(() => { copyButton.textContent = "Copy link"; }, 2000);
+});
+// Finding every solution takes longer than finding one, so it waits until someone asks.
+solutionsBox.addEventListener("toggle", () => {
+  if (!solutionsBox.open || solutionsBox.hidden || solutionsList.children.length) return;
+  const solutions = allSolutions(...currentPuzzle());
+  solutionsSummary.textContent = `${solutions.length} distinct ${solutions.length === 1 ? "solution" : "solutions"}`;
+  solutionsList.replaceChildren(...solutions.map(text => {
+    const item = document.createElement("li");
+    item.textContent = text;
+    return item;
+  }));
 });
 addEventListener("hashchange", () => {
   if (applyHash()) changed();

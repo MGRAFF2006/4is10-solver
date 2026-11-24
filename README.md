@@ -4,7 +4,7 @@ Four digits. One perfect ten. A small arithmetic puzzle solver with a responsive
 
 **[Open the live site](https://4is10-solver.graff-mathis.workers.dev)** · [Source](https://github.com/MGRAFF2006/4is10-solver)
 
-Choose four digits from 0 to 9, allow the operations you want, and make ten. Drag a digit up or down, use its buttons or keyboard arrows, or type directly. The address keeps the current puzzle, for example `#digits=1158&ops=asmd&parens=on` (operations: **a**dd, **s**ubtract, **m**ultiply, **d**ivide), so **Copy link** or the address bar shares it. Tick **Hide the answer until I ask** to solve it yourself: ask for a hint (the first operation to work out) or reveal the answer. Shared links keep this setting (`&mode=puzzle`). The fragment never reaches the server. All calculations happen in your browser; there are no runtime dependencies, external fonts, analytics, or backend calls.
+Choose four digits from 0 to 9, allow the operations you want, and make ten. Drag a digit up or down, use its buttons or keyboard arrows, or type directly. The address keeps the current puzzle, for example `#digits=1158&ops=asmd&parens=on` (operations: **a**dd, **s**ubtract, **m**ultiply, **d**ivide), so **Copy link** or the address bar shares it. Tick **Hide the answer until I ask** to solve it yourself: ask for a hint (the first operation to work out) or reveal the answer. Shared links keep this setting (`&mode=puzzle`). Once the answer is shown, **Show all solutions** lists every distinct way to make ten. The fragment never reaches the server. All calculations happen in your browser; there are no runtime dependencies, external fonts, analytics, or backend calls.
 
 ## Run
 
@@ -38,11 +38,11 @@ On Arch Linux, use an existing Chromium installation instead of downloading a br
 CHROMIUM_PATH=/usr/bin/chromium npm run test:browser
 ```
 
-The solver tests compare the result against an independent subset search for all 715 unordered four-digit combinations. Browser tests cover typing, operation toggles, mouse and touch dragging, keyboard controls, screen-reader announcements, shared links, puzzle mode, invalid input, layout overflow, security headers, and private file exclusion.
+The solver tests compare the result against an independent subset search for all 715 unordered four-digit combinations. Browser tests cover typing, operation toggles, mouse and touch dragging, keyboard controls, screen-reader announcements, shared links, puzzle mode, the solutions list, invalid input, layout overflow, security headers, and private file exclusion.
 
 ## Solver
 
-The solver prefers a simple expression without parentheses. If necessary, it searches every distinct digit permutation and all five binary parenthesis groupings, using only the enabled operations, and shows the answer with the fewest parentheses, printing only brackets that change the result and avoiding negative intermediate values when an equally simple answer exists. Each digit is used exactly once. Integer fractions make the arithmetic exact; division by zero is skipped. If no expression equals ten, the closest finite result is displayed. Concatenation, powers, factorials, and unary operations are outside the puzzle rules.
+The solver prefers a simple expression without parentheses. If necessary, it searches every distinct digit permutation and all five binary parenthesis groupings, using only the enabled operations, and shows the answer with the fewest parentheses, printing only brackets that change the result and avoiding negative intermediate values when an equally simple answer exists. Each digit is used exactly once. Integer fractions make the arithmetic exact; division by zero is skipped. If no expression equals ten, the closest finite result is displayed. The full solutions list counts answers that only reorder or regroup the terms of a sum or the factors of a product as one, and treats subtracting a part worth 0 or dividing by a part worth 1 like adding or multiplying by it. Concatenation, powers, factorials, and unary operations are outside the puzzle rules.
 
 - `index.html`, `src/css/index.css`: interface and responsive styling.
 - `src/js/index.js`: accessible inputs, dragging, and result display.
