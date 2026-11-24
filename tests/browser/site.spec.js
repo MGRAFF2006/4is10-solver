@@ -179,3 +179,51 @@ test("Copy link copies the current puzzle and its feedback is not overwritten", 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
   await expect(page).toHaveURL(copied);
 });
+
+test("puzzle mode hides the answer until a hint or reveal is asked for", async ({ page }) => {
+  await page.goto("/");
+  const status = page.locator("#result-status");
+  const expression = page.locator("#expression");
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(status).toHaveText("Your turn");
+  await expect(expression).toHaveText("Make 10 with 5, 5, 5 and 5.");
+  await expect(page.locator("#answer")).toHaveText("?");
+  await expect(page.locator(".result-panel")).not.toContainText("5 + 5 + 5 − 5");
+  await expect(page.getByRole("status")).toHaveText("Your turn. Make 10 with 5, 5, 5 and 5.");
+  await expect(page).toHaveURL(/#digits=5555&ops=asmd&parens=on&mode=puzzle$/);
+
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(status).toHaveText("Hint");
+  await expect(expression).toHaveText("Start with 5 + 5.");
+  await expect(page.getByRole("button", { name: "Show a hint" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Reveal the answer" })).toBeFocused();
+  await expect(page.getByRole("status")).toHaveText("Hint: Start with 5 plus 5.");
+
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(status).toHaveText("Exact match");
+  await expect(expression).toHaveText("5 + 5 + 5 − 5");
+  await page.getByRole("button", { name: "Hide the answer" }).click();
+  await expect(status).toHaveText("Hint");
+
+  // A new puzzle starts hidden again, without the earlier hint; "Find a solution" reveals it.
+  await page.locator("#digit-1").press("ArrowDown");
+  await expect(status).toHaveText("Your turn");
+  await expect(page.getByRole("button", { name: "Show a hint" })).toBeVisible();
+  await page.getByRole("button", { name: "Find a solution" }).click();
+  await expect(status).toHaveText("Exact match");
+
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).uncheck();
+  await expect(page.locator("#puzzle-actions")).toBeHidden();
+  await expect(page).toHaveURL(/#digits=4555&ops=asmd&parens=on$/);
+});
+
+test("a shared puzzle-mode link opens hidden, also when ten is out of reach", async ({ page }) => {
+  await page.goto("/#digits=1111&ops=asmd&parens=on&mode=puzzle");
+  await expect(page.getByRole("checkbox", { name: "Hide the answer until I ask" })).toBeChecked();
+  await expect(page.locator("#result-status")).toHaveText("Your turn");
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(page.locator("#expression")).toHaveText("Ten isn’t reachable with these settings. Get as close as you can.");
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(page.locator("#result-status")).toHaveText("Closest result");
+  await expect(page.locator("#answer")).toHaveText("4");
+});

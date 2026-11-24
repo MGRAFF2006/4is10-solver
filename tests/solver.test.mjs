@@ -7,7 +7,10 @@ function evaluate(expression) {
   const tokens = expression.match(/\d|[−+×÷()]/g);
   let position = 0;
   const steps = [];
+  let first;
   const apply = (a, operator, b) => {
+    // Nothing has been worked out before the first step, so both operands are digits.
+    first ??= `${a} ${operator} ${b}`;
     steps.push({ "+": a + b, "−": a - b, "×": a * b, "÷": a / b }[operator]);
     return steps.at(-1);
   };
@@ -31,7 +34,7 @@ function evaluate(expression) {
   const value = sum();
   assert.equal(position, tokens.length, expression);
   // The last step applied is the outermost operation, which produces the answer itself.
-  return { value, negative: steps.slice(0, -1).some(step => step < 0) };
+  return { value, negative: steps.slice(0, -1).some(step => step < 0), first };
 }
 
 function withoutEachBracketPair(expression) {
@@ -48,7 +51,7 @@ function withoutEachBracketPair(expression) {
 }
 
 test("prefers a simple expression and uses all four digits", () => {
-  assert.deepEqual(solve([5, 5, 5, 5]), { expression: "5 + 5 + 5 − 5", value: 10, exact: true });
+  assert.deepEqual(solve([5, 5, 5, 5]), { expression: "5 + 5 + 5 − 5", value: 10, exact: true, firstStep: "5 + 5" });
   assert.equal(solve([0, 1, 2, 5]).exact, true);
 });
 
@@ -63,23 +66,24 @@ test("finds solutions requiring nested and separate groupings", () => {
 });
 
 test("shows only the parentheses an answer needs and avoids negative steps when it can", () => {
-  assert.deepEqual(solve([1, 1, 5, 8]), { expression: "8 ÷ (1 − 1 ÷ 5)", value: 10, exact: true });
+  assert.deepEqual(solve([1, 1, 5, 8]), { expression: "8 ÷ (1 − 1 ÷ 5)", value: 10, exact: true, firstStep: "1 ÷ 5" });
   // Previously "0 − ((1 − 6) × 2)": doubled brackets and a negative intermediate value.
   const result = solve([0, 1, 2, 6]);
   assert.equal(result.exact, true);
   assert.equal(result.expression.match(/\(/g).length, 1, result.expression);
-  assert.deepEqual(evaluate(result.expression), { value: 10, negative: false });
+  assert.deepEqual(evaluate(result.expression), { value: 10, negative: false, first: "6 − 1" });
   // Without parentheses too: "0 + 2 − 1 + 9" rather than "0 − 1 + 2 + 9", for exact and closest results.
   for (const [digits, operators, value] of [[[0, 1, 2, 9], ["+", "-"], 10], [[0, 1, 3, 4], ["+", "-", "*"], 11]]) {
     for (const parentheses of [true, false]) {
       const { expression } = solve(digits, operators, parentheses);
-      assert.deepEqual(evaluate(expression), { value, negative: false }, expression);
+      const shown = evaluate(expression);
+      assert.deepEqual([shown.value, shown.negative], [value, false], expression);
     }
   }
 });
 
 test("respects enabled operators and returns the closest finite result", () => {
-  assert.deepEqual(solve([1, 2, 3, 4], ["+"]), { expression: "1 + 2 + 3 + 4", value: 10, exact: true });
+  assert.deepEqual(solve([1, 2, 3, 4], ["+"]), { expression: "1 + 2 + 3 + 4", value: 10, exact: true, firstStep: "1 + 2" });
   assert.equal(solve([1, 1, 1, 1]).value, 4);
   assert.equal(solve([0, 0, 0, 0]).value, 0);
   assert.equal(solve([0, 0, 0, 0], ["/"]), null);
@@ -121,7 +125,10 @@ test("matches an independent subset search and prints each answer correctly for 
       assert.ok(Math.abs(Math.abs(10 - result.value) - closestDistance(digits)) < 1e-9, String(digits));
       assert.deepEqual(result.expression.match(/\d/g).map(Number).sort(), digits);
       // The printed answer is what the solver says it is, and no bracket pair is redundant.
-      assert.ok(Math.abs(evaluate(result.expression).value - result.value) < 1e-9, result.expression);
+      const shown = evaluate(result.expression);
+      assert.ok(Math.abs(shown.value - result.value) < 1e-9, result.expression);
+      // The hint names the operation a person would work out first.
+      assert.equal(result.firstStep, shown.first, result.expression);
       for (const variant of withoutEachBracketPair(result.expression)) {
         assert.ok(!(Math.abs(evaluate(variant).value - result.value) < 1e-9), `${result.expression} → ${variant}`);
       }

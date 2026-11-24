@@ -11,11 +11,18 @@ const announcement = document.querySelector("#announcement");
 const operatorBoxes = [...form.querySelectorAll('[name="operator"]')];
 const parenthesesBox = document.querySelector("#parentheses");
 const copyButton = document.querySelector("#copy-link");
+const hideBox = document.querySelector("#hide-answer");
+const puzzleActions = document.querySelector("#puzzle-actions");
+const hintButton = document.querySelector("#hint");
+const revealButton = document.querySelector("#reveal");
 // Short letters keep shared links readable; "+" would turn into a space in a query string.
 const operatorCodes = { "+": "a", "-": "s", "*": "m", "/": "d" };
 const formatter = new Intl.NumberFormat("en", { maximumSignificantDigits: 10 });
 const spokenSymbols = { "+": "plus", "−": "minus", "×": "times", "÷": "divided by", "(": "open bracket", ")": "close bracket" };
 let settleTimer;
+// With "Hide the answer" on, each new puzzle starts hidden until a hint or reveal is asked for.
+let hinted = false;
+let revealed = false;
 
 function spoken(text) {
   return text.replace(/[+−×÷()]/g, symbol => ` ${spokenSymbols[symbol]} `).replace(/\s+/g, " ").trim();
@@ -37,7 +44,24 @@ function showSolution() {
     note.textContent = valid && operators.length
       ? "Every expression with these settings divides by zero. Try another operation."
       : "Change your settings and we’ll try again.";
+    puzzleActions.hidden = true;
     return `Check your inputs. ${expression.textContent} ${note.textContent}`;
+  }
+  puzzleActions.hidden = !hideBox.checked;
+  hintButton.hidden = hinted || revealed;
+  revealButton.textContent = revealed ? "Hide the answer" : "Reveal the answer";
+  if (hideBox.checked && !revealed) {
+    const digits = inputs.map(input => input.value);
+    const task = `Make 10 with ${digits.slice(0, 3).join(", ")} and ${digits[3]}.`;
+    const hint = result.exact ? `Start with ${result.firstStep}.`
+      : "Ten isn’t reachable with these settings. Get as close as you can.";
+    panel.dataset.state = "hidden";
+    status.textContent = hinted ? "Hint" : "Your turn";
+    expression.textContent = hinted ? hint : task;
+    answer.textContent = "?";
+    note.textContent = hinted ? `${task} Use each digit exactly once.`
+      : "Use each digit exactly once. Ask for a hint or reveal the answer.";
+    return hinted ? `Hint: ${spoken(hint)}` : `Your turn. ${task}`;
   }
   panel.dataset.state = result.exact ? "exact" : "closest";
   status.textContent = result.exact ? "Exact match" : "Closest result";
@@ -65,11 +89,13 @@ let sharedHash = null;
 /** The current puzzle as a fragment, or null while a digit is missing. */
 function puzzleHash() {
   if (!inputs.every(input => input.validity.valid)) return null;
-  return `#${new URLSearchParams({
+  const params = new URLSearchParams({
     digits: inputs.map(input => input.value).join(""),
     ops: operatorBoxes.filter(box => box.checked).map(box => operatorCodes[box.value]).join(""),
     parens: parenthesesBox.checked ? "on" : "off",
-  })}`;
+  });
+  if (hideBox.checked) params.set("mode", "puzzle");
+  return `#${params}`;
 }
 
 // While a digit is being fixed, the address keeps the last complete puzzle.
@@ -83,7 +109,7 @@ function saveHash() {
 /** Apply a shared puzzle from the address fragment. Returns false for other fragments, such as #solver. */
 function applyHash() {
   const params = new URLSearchParams(location.hash.slice(1));
-  if (!params.has("digits") && !params.has("ops") && !params.has("parens")) return false;
+  if (!["digits", "ops", "parens", "mode"].some(key => params.has(key))) return false;
   // A link describes a whole puzzle: missing or malformed parts use the defaults,
   // never whatever was on screen before.
   const digits = params.get("digits");
@@ -93,6 +119,7 @@ function applyHash() {
   inputs.forEach((input, index) => { input.value = validDigits[index]; });
   operatorBoxes.forEach(box => { box.checked = validOps.includes(operatorCodes[box.value]); });
   parenthesesBox.checked = params.get("parens") !== "off";
+  hideBox.checked = params.get("mode") === "puzzle";
   sharedHash = puzzleHash();
   return true;
 }
@@ -108,6 +135,13 @@ function update() {
   }, 600);
 }
 
+// A new puzzle or new settings: hide the answer again if the visitor asked for that.
+function changed() {
+  hinted = false;
+  revealed = false;
+  update();
+}
+
 function setDigit(input, value) {
   input.value = String(((value % 10) + 10) % 10);
 }
@@ -117,16 +151,16 @@ inputs.forEach(input => {
   card.querySelectorAll(".digit-step").forEach(button => {
     button.addEventListener("click", () => {
       setDigit(input, (Number(input.value) || 0) + Number(button.dataset.step));
-      update();
+      changed();
     });
   });
   input.addEventListener("focus", () => input.select());
-  input.addEventListener("input", update);
+  input.addEventListener("input", changed);
   input.addEventListener("keydown", event => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     setDigit(input, (Number(input.value) || 0) + (event.key === "ArrowUp" ? 1 : -1));
-    update();
+    changed();
   });
   let drag = null;
   input.addEventListener("pointerdown", event => {
@@ -142,7 +176,7 @@ inputs.forEach(input => {
     event.preventDefault();
     const previous = input.value;
     setDigit(input, drag.value + steps);
-    if (input.value !== previous) update();
+    if (input.value !== previous) changed();
   });
   const endDrag = () => {
     drag = null;
@@ -155,14 +189,26 @@ inputs.forEach(input => {
 
 form.addEventListener("submit", event => {
   event.preventDefault();
+  // "Find a solution" shows the answer, even when it is hidden.
+  revealed = true;
+  update();
+});
+hintButton.addEventListener("click", () => {
+  hinted = true;
+  update();
+  // The hint button disappears; keep keyboard focus on the next action.
+  revealButton.focus();
+});
+revealButton.addEventListener("click", () => {
+  revealed = !revealed;
   update();
 });
 form.querySelectorAll('input[type="checkbox"]').forEach(input => {
-  input.addEventListener("change", update);
+  input.addEventListener("change", changed);
 });
 document.querySelector("#randomize").addEventListener("click", () => {
   inputs.forEach(input => setDigit(input, Math.floor(Math.random() * 10)));
-  update();
+  changed();
 });
 let copyReset;
 copyButton.addEventListener("click", async () => {
@@ -187,7 +233,7 @@ copyButton.addEventListener("click", async () => {
   copyReset = setTimeout(() => { copyButton.textContent = "Copy link"; }, 2000);
 });
 addEventListener("hashchange", () => {
-  if (applyHash()) update();
+  if (applyHash()) changed();
   // In-page links such as #solver have already scrolled; keep the puzzle in the address.
   else if (sharedHash) history.replaceState(null, "", sharedHash);
 });

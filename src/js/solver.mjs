@@ -40,7 +40,12 @@ function flatResult(digits, operators) {
       sign = operators[i];
     }
   }
-  return { ...combine(sum, term, sign), parens: 0, negative, expression: digits.map((digit, i) =>
+  // Products are evaluated first: the opening product if there is one, else the second
+  // term's product, else the first two digits are added or subtracted.
+  const step = i => `${digits[i]} ${symbols[operators[i]]} ${digits[i + 1]}`;
+  const multiplicative = operator => operator === "*" || operator === "/";
+  const firstStep = !multiplicative(operators[0]) && multiplicative(operators[1]) ? step(1) : step(0);
+  return { ...combine(sum, term, sign), parens: 0, negative, firstStep, expression: digits.map((digit, i) =>
     `${i ? ` ${symbols[operators[i - 1]]} ` : ""}${digit}`).join("") };
 }
 
@@ -57,19 +62,26 @@ function operand(child, operator, side) {
 
 function* groupedResults(digits, operators) {
   if (digits.length === 1) {
-    yield { n: digits[0], d: 1, expression: String(digits[0]), parens: 0, negative: false };
+    yield { n: digits[0], d: 1, expression: String(digits[0]), parens: 0, negative: false, firstStep: null };
     return;
   }
   for (let split = 1; split < digits.length; split++) {
     for (const left of groupedResults(digits.slice(0, split), operators)) {
       for (const right of groupedResults(digits.slice(split), operators)) {
         for (const operator of operators) {
+          // "a + (b − c)" prints as "a + b − c", which reads as "(a + b) − c". That tree is
+          // searched too, so keep only the one whose steps match the printed answer.
+          if (precedence[right.operator] === precedence[operator] && (operator === "+" || operator === "*")) continue;
           const fraction = combine(left, right, operator);
           if (!fraction) continue;
           const [leftText, leftParens] = operand(left, operator, "left");
           const [rightText, rightParens] = operand(right, operator, "right");
           yield { ...fraction, operator, parens: leftParens + rightParens,
             negative: left.negative || right.negative || left.n < 0 || right.n < 0,
+            // Evaluation works left to right through the tree, so the first step is the
+            // leftmost operation whose operands are both single digits.
+            firstStep: left.firstStep ?? right.firstStep ??
+              `${left.expression} ${symbols[operator]} ${right.expression}`,
             expression: `${leftText} ${symbols[operator]} ${rightText}` };
         }
       }
@@ -78,7 +90,8 @@ function* groupedResults(digits, operators) {
 }
 
 /** Search every digit order and binary grouping, using exact integer fractions.
- * Prefers the closest result, then the fewest parentheses. */
+ * Prefers the closest result, then the fewest parentheses. `firstStep` is the first
+ * operation to work out, such as "1 ÷ 5" for "8 ÷ (1 − 1 ÷ 5)", for hints. */
 export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = true) {
   if (!Array.isArray(digits) || digits.length !== 4 ||
       Array.from(digits).some(digit => !Number.isInteger(digit) || digit < 0 || digit > 9)) {
@@ -101,7 +114,7 @@ export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = tr
     if (order < 0) best = result;
   };
   const exact = () => best && best.n === 10 * best.d;
-  const finish = () => ({ expression: best.expression, value: best.n / best.d, exact: exact() });
+  const finish = () => ({ expression: best.expression, value: best.n / best.d, exact: exact(), firstStep: best.firstStep });
   const orders = [...permutations(digits)];
   // Every expression without parentheses is tried first, in a readable order.
   for (const order of orders) {

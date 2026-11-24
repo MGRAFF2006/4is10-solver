@@ -56,11 +56,13 @@
               <label class="operator"><input type="checkbox" name="operator" value="/" checked aria-label="Allow division"><span aria-hidden="true">÷</span></label>
               <label class="operator parentheses"><input type="checkbox" id="parentheses" checked aria-label="Allow parentheses"><span aria-hidden="true">( )</span></label>
             </div></fieldset>
+            <label class="hide-answer"><input type="checkbox" id="hide-answer"><span>Hide the answer until I ask</span></label>
             <button type="submit" class="solve-button">Find a solution <span aria-hidden="true">↗</span></button>
           </div>
           <section class="result-panel" aria-labelledby="result-heading">
             <div class="result-topline"><h2 id="result-heading">The result</h2><span id="result-status" class="result-status">Ready to solve</span></div>
             <div class="result-body"><span class="result-mark" aria-hidden="true">=</span><p id="expression" class="expression">Your equation goes here.</p><p id="answer" class="answer">?<span class="answer-dot">.</span></p></div>
+            <div id="puzzle-actions" class="puzzle-actions" hidden><button type="button" id="hint" class="text-button">Show a hint</button><button type="button" id="reveal" class="text-button">Reveal the answer</button></div>
             <p id="result-note" class="result-note">All four digits. Every one used exactly once.</p>
             <p id="announcement" class="sr-only" role="status"></p>
           </section>
