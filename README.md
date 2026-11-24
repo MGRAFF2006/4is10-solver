@@ -42,7 +42,7 @@ The solver tests compare the result against an independent subset search for all
 
 ## Solver
 
-The solver prefers a simple expression without parentheses. If necessary, it searches every distinct digit permutation and all five binary parenthesis groupings, using only the enabled operations. Each digit is used exactly once. Integer fractions make the arithmetic exact; division by zero is skipped. If no expression equals ten, the closest finite result is displayed. Concatenation, powers, factorials, and unary operations are outside the puzzle rules.
+The solver prefers a simple expression without parentheses. If necessary, it searches every distinct digit permutation and all five binary parenthesis groupings, using only the enabled operations, and shows the answer with the fewest parentheses, printing only brackets that change the result and avoiding negative intermediate values when an equally simple answer exists. Each digit is used exactly once. Integer fractions make the arithmetic exact; division by zero is skipped. If no expression equals ten, the closest finite result is displayed. Concatenation, powers, factorials, and unary operations are outside the puzzle rules.
 
 - `index.html`, `src/css/index.css`: interface and responsive styling.
 - `src/js/index.js`: accessible inputs, dragging, and result display.

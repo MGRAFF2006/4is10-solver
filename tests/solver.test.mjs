@@ -2,19 +2,73 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { solve } from "../src/js/solver.mjs";
 
+// Reads a displayed answer with the usual order of operations, independently of the solver.
+function evaluate(expression) {
+  const tokens = expression.match(/\d|[−+×÷()]/g);
+  let position = 0;
+  const steps = [];
+  const apply = (a, operator, b) => {
+    steps.push({ "+": a + b, "−": a - b, "×": a * b, "÷": a / b }[operator]);
+    return steps.at(-1);
+  };
+  const factor = () => {
+    const token = tokens[position++];
+    if (token !== "(") return Number(token);
+    const value = sum();
+    assert.equal(tokens[position++], ")", expression);
+    return value;
+  };
+  const product = () => {
+    let value = factor();
+    while (tokens[position] === "×" || tokens[position] === "÷") value = apply(value, tokens[position++], factor());
+    return value;
+  };
+  const sum = () => {
+    let value = product();
+    while (tokens[position] === "+" || tokens[position] === "−") value = apply(value, tokens[position++], product());
+    return value;
+  };
+  const value = sum();
+  assert.equal(position, tokens.length, expression);
+  // The last step applied is the outermost operation, which produces the answer itself.
+  return { value, negative: steps.slice(0, -1).some(step => step < 0) };
+}
+
+function withoutEachBracketPair(expression) {
+  const variants = [];
+  const open = [];
+  [...expression].forEach((character, index) => {
+    if (character === "(") open.push(index);
+    if (character === ")") {
+      const start = open.pop();
+      variants.push(expression.slice(0, start) + expression.slice(start + 1, index) + expression.slice(index + 1));
+    }
+  });
+  return variants;
+}
+
 test("prefers a simple expression and uses all four digits", () => {
   assert.deepEqual(solve([5, 5, 5, 5]), { expression: "5 + 5 + 5 − 5", value: 10, exact: true });
   assert.equal(solve([0, 1, 2, 5]).exact, true);
 });
 
 test("finds solutions requiring nested and separate groupings", () => {
-  // Both fail without parentheses. The second needs a grouping on each side.
+  // All three fail without parentheses.
   for (const digits of [[1, 3, 4, 6], [1, 1, 2, 3], [1, 1, 5, 8]]) {
     const result = solve(digits);
     assert.equal(result.exact, true);
     assert.equal(solve(digits, undefined, false).exact, false);
     assert.deepEqual(result.expression.match(/\d/g).map(Number).sort(), [...digits].sort());
   }
+});
+
+test("shows only the parentheses an answer needs and avoids negative steps when it can", () => {
+  assert.deepEqual(solve([1, 1, 5, 8]), { expression: "8 ÷ (1 − 1 ÷ 5)", value: 10, exact: true });
+  // Previously "0 − ((1 − 6) × 2)": doubled brackets and a negative intermediate value.
+  const result = solve([0, 1, 2, 6]);
+  assert.equal(result.exact, true);
+  assert.equal(result.expression.match(/\(/g).length, 1, result.expression);
+  assert.deepEqual(evaluate(result.expression), { value: 10, negative: false });
 });
 
 test("respects enabled operators and returns the closest finite result", () => {
@@ -36,7 +90,7 @@ test("validates input at the solver boundary", () => {
   assert.throws(() => solve([1, 2, 3, 4], [new String("+")]), TypeError);
 });
 
-test("matches an independent subset search for all 715 unordered digit combinations", () => {
+test("matches an independent subset search and prints each answer correctly for all 715 combinations", () => {
   function closestDistance(digits) {
     const values = Array.from({ length: 16 }, () => new Set());
     digits.forEach((digit, index) => values[1 << index].add(digit));
@@ -59,6 +113,11 @@ test("matches an independent subset search for all 715 unordered digit combinati
       const result = solve(digits);
       assert.ok(Math.abs(Math.abs(10 - result.value) - closestDistance(digits)) < 1e-9, String(digits));
       assert.deepEqual(result.expression.match(/\d/g).map(Number).sort(), digits);
+      // The printed answer is what the solver says it is, and no bracket pair is redundant.
+      assert.ok(Math.abs(evaluate(result.expression).value - result.value) < 1e-9, result.expression);
+      for (const variant of withoutEachBracketPair(result.expression)) {
+        assert.ok(!(Math.abs(evaluate(variant).value - result.value) < 1e-9), `${result.expression} → ${variant}`);
+      }
     }
   }
 });
