@@ -303,3 +303,30 @@ for (const [opening, replacement] of [["#digits=1158&ops=asmd&parens=on&mode=puz
     await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
   });
 }
+
+test("all solutions open on request, follow changes, and stay hidden in puzzle mode", async ({ page }) => {
+  await page.goto("/#digits=1234&ops=a&parens=on");
+  const box = page.locator("#all-solutions");
+  await box.getByText("Show all solutions").click();
+  await expect(box.locator("summary")).toHaveText("1 distinct solution");
+  await expect(box.getByRole("listitem")).toHaveText(["1 + 2 + 3 + 4"]);
+
+  // New settings close the list and recompute it when opened again.
+  await page.getByRole("checkbox", { name: "Allow multiplication" }).check();
+  await expect(box).not.toHaveAttribute("open");
+  await box.getByText("Show all solutions").click();
+  await expect(box.locator("summary")).toHaveText(/^\d+ distinct solutions$/);
+  expect(await box.getByRole("listitem").count()).toBeGreaterThan(1);
+
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(box).toBeHidden();
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(box).toBeVisible();
+
+  await page.locator("#digit-1").fill("1");
+  for (const index of [2, 3, 4]) await page.locator(`#digit-${index}`).fill("1");
+  await expect(page.getByRole("button", { name: "Reveal the answer" })).toBeVisible();
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(page.locator("#result-status")).toHaveText("Closest result");
+  await expect(box).toBeHidden();
+});

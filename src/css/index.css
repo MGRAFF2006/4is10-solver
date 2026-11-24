@@ -77,6 +77,11 @@ h1 > span { color: var(--muted); }
 .hide-answer input:checked::after { content: ""; width: 9px; height: 5px; border: solid #111; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
 .puzzle-actions { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 18px; }
 .puzzle-actions[hidden] { display: none; }
+.all-solutions { margin-bottom: 18px; font-size: 12px; }
+.all-solutions summary { width: fit-content; cursor: pointer; }
+.all-solutions summary:focus-visible { outline: 2px solid var(--white); outline-offset: 5px; }
+.all-solutions ol { columns: 2; column-gap: 24px; margin: 14px 0 0; padding-left: 2.2em; font-family: monospace; font-size: 13px; line-height: 1.8; }
+.all-solutions li::marker { color: var(--muted); }
 .solve-button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; background: var(--white); color: #111; border: 1px solid var(--white); font-size: 14px; font-weight: 600; border-radius: 2px; transition: background .15s; }
 .solve-button:hover { background: #ccc; }
 .solve-button span { font-size: 21px; line-height: 1; }
@@ -143,6 +148,7 @@ h1 > span { color: var(--muted); }
   .expression { margin-top: 14px; font-size: 21px; }
   .answer { font-size: 88px; }
   .result-panel[data-state="closest"] .answer { font-size: 48px; }
+  .all-solutions ol { columns: 1; }
   .rules { grid-template-columns: 1fr; gap: 32px; padding: 48px 4px; }
   .rules-heading .eyebrow { font-size: 9px; }
   .rules-heading h2 { font-size: 28px; }

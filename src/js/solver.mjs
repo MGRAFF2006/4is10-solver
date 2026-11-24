@@ -60,6 +60,26 @@ function operand(child, operator, side) {
   return needed ? [`(${child.expression})`, child.parens + 1] : [child.expression, child.parens];
 }
 
+// Answers that differ only in the order or grouping of terms in a sum, or of factors in a
+// product, are the same solution: "5 + 5 + 5 − 5" and "5 − 5 + 5 + 5" share one key.
+// Subtracting 0 and dividing by 1 count as adding 0 and multiplying by 1.
+// Only answers that make ten need a key, so it is worked out on request.
+function canonical(node) {
+  if (!node.operator) return { kind: "digit", key: node.expression };
+  const { left, right, operator } = node;
+  const kind = operator === "+" || operator === "-" ? "sum" : "product";
+  const [same, inverse, identity] = kind === "sum" ? ["+", "-", "0"] : ["*", "/", "1"];
+  const parts = child => {
+    const form = canonical(child);
+    return form.kind === kind ? form.parts : [same + form.key];
+  };
+  const invert = part => (part[0] === same ? inverse : same) + part.slice(1);
+  const rightParts = operator === same ? parts(right) : parts(right).map(invert);
+  const all = [...parts(left), ...rightParts]
+    .map(part => part === inverse + identity ? same + identity : part).sort();
+  return { kind, parts: all, key: `${kind}(${all.join(" ")})` };
+}
+
 function* groupedResults(digits, operators) {
   if (digits.length === 1) {
     yield { n: digits[0], d: 1, expression: String(digits[0]), parens: 0, negative: false, firstStep: null };
@@ -76,7 +96,7 @@ function* groupedResults(digits, operators) {
           if (!fraction) continue;
           const [leftText, leftParens] = operand(left, operator, "left");
           const [rightText, rightParens] = operand(right, operator, "right");
-          yield { ...fraction, operator, parens: leftParens + rightParens,
+          yield { ...fraction, left, right, operator, parens: leftParens + rightParens,
             negative: left.negative || right.negative || left.n < 0 || right.n < 0,
             // Evaluation works left to right through the tree, so the first step is the
             // leftmost operation whose operands are both single digits.
@@ -92,7 +112,7 @@ function* groupedResults(digits, operators) {
 /** Search every digit order and binary grouping, using exact integer fractions.
  * Prefers the closest result, then the fewest parentheses. `firstStep` is the first
  * operation to work out, such as "1 ÷ 5" for "8 ÷ (1 − 1 ÷ 5)", for hints. */
-export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = true) {
+function validate(digits, operators) {
   if (!Array.isArray(digits) || digits.length !== 4 ||
       Array.from(digits).some(digit => !Number.isInteger(digit) || digit < 0 || digit > 9)) {
     throw new TypeError("Choose exactly four digits from 0 to 9.");
@@ -101,8 +121,12 @@ export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = tr
     typeof operator !== "string" || !Object.hasOwn(symbols, operator))) {
     throw new TypeError("Unknown arithmetic operator.");
   }
+  return [...new Set(operators)];
+}
+
+export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = true) {
+  operators = validate(digits, operators);
   if (operators.length === 0) return null;
-  operators = [...new Set(operators)];
   let best = null;
   // Closer to ten wins. At equal distance, fewer parentheses and then
   // avoiding negative intermediate values make the answer easier to follow.
@@ -134,4 +158,25 @@ export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = tr
     }
   }
   return best ? finish() : null;
+}
+
+/** Every distinct way to make exactly ten, each printed as simply as possible: fewest
+ * parentheses, then no negative intermediate values. Reordering or regrouping terms of a
+ * sum or factors of a product does not make a new solution. */
+export function allSolutions(digits, operators = ["+", "-", "*", "/"], parentheses = true) {
+  operators = validate(digits, operators);
+  const best = new Map();
+  for (const order of permutations(digits)) {
+    for (const result of groupedResults(order, operators)) {
+      if (result.n !== 10 * result.d || (!parentheses && result.parens > 0)) continue;
+      const { key } = canonical(result);
+      const current = best.get(key);
+      const simpler = !current || result.parens < current.parens ||
+        (result.parens === current.parens && result.negative < current.negative);
+      if (simpler) best.set(key, result);
+    }
+  }
+  return [...best.values()]
+    .sort((a, b) => a.parens - b.parens || a.negative - b.negative)
+    .map(result => result.expression);
 }
