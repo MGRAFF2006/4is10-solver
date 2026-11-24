@@ -39,9 +39,11 @@ h1 > span { color: var(--muted); }
 .intro-aside p { font-size: 19px; line-height: 1.6; letter-spacing: -.4px; }
 .text-link { display: inline-flex; gap: 34px; font-size: 13px; margin-top: 27px; }
 .solver { border: 1px solid var(--line); background: var(--panel); }
-.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 24px 32px; border-bottom: 1px solid var(--line); }
+.panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 24px 32px; border-bottom: 1px solid var(--line); }
 .panel-heading h2, .operations legend { font-size: 13px; font-weight: 400; }
 .section-number { color: var(--muted); font-family: monospace; font-size: 11px; margin-right: 12px; }
+.panel-actions { display: flex; gap: 24px; }
+.panel-heading h2, .text-button { white-space: nowrap; }
 .text-button { background: transparent; color: var(--white); border: 0; padding: 4px 0; font-size: 12px; }
 .text-button span { margin-left: 8px; }
 .text-button:hover { color: var(--muted); }
