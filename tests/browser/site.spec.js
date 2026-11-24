@@ -328,6 +328,21 @@ test("a solver that fails to load says so", async ({ page }) => {
   await expect(page.locator(".puzzle-inputs")).toHaveAttribute("inert", "");
 });
 
+test("a later script error does not replace a working result", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  // Same-origin, so the page's CSP allows it; the file does not exist. The window listener
+  // runs in the capture phase, before this script's own error handler resolves.
+  await page.evaluate(() => new Promise(resolve => {
+    const script = document.createElement("script");
+    script.src = "/missing.js";
+    script.addEventListener("error", resolve);
+    document.head.append(script);
+  }));
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  await expect(page.locator("#expression")).toHaveText("5 + 5 + 5 − 5");
+});
+
 test("all solutions open on request, follow changes, and stay hidden in puzzle mode", async ({ page }) => {
   await page.goto("/#digits=1234&ops=a&parens=on");
   const box = page.locator("#all-solutions");
