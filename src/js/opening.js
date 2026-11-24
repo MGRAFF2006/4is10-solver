@@ -11,3 +11,15 @@
   remember();
   addEventListener("hashchange", remember);
 }
+
+// If the solver script or one of its modules cannot load, the controls stay inert;
+// say so instead of "Loading…" forever. Script errors do not bubble, so listen while capturing.
+// Once startup has enabled the controls, a script error no longer means the solver is missing.
+addEventListener("error", event => {
+  if (!(event.target instanceof HTMLScriptElement)) return;
+  if (!document.querySelector(".puzzle-inputs[inert]")) return;
+  const status = document.querySelector("#result-status");
+  if (status) status.textContent = "Couldn’t load";
+  const expression = document.querySelector("#expression");
+  if (expression) expression.textContent = "The solver didn’t load. Check your connection and reload the page.";
+}, true);

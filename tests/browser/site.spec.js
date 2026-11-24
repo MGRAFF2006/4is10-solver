@@ -1,5 +1,15 @@
 import { test, expect } from "@playwright/test";
 
+// What assistive technology gets: Chromium's accessibility tree, which leaves out inert content.
+// (Playwright's role locators and ARIA snapshots still include inert elements.)
+async function accessibleNames(page) {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Accessibility.enable");
+  const { nodes } = await session.send("Accessibility.getFullAXTree");
+  await session.detach();
+  return nodes.filter(node => !node.ignored && node.name?.value).map(node => `${node.role.value}: ${node.name.value.trim()}`);
+}
+
 test("loads locally without errors or third-party requests", async ({ page, baseURL }) => {
   const errors = [];
   const external = [];
@@ -285,9 +295,12 @@ for (const [opening, replacement] of [["#digits=1158&ops=asmd&parens=on&mode=puz
       await route.continue();
     });
     await page.goto(`/${opening}`, { waitUntil: "commit" });
-    const layout = page.locator(".puzzle-layout");
-    await expect(layout).toHaveAttribute("inert", "");
+    const controls = page.locator(".puzzle-inputs");
+    await expect(controls).toHaveAttribute("inert", "");
+    // Screen readers can read why the controls are idle; Copy link and Shuffle are not offered yet.
     await expect(page.locator("#result-status")).toHaveText("Loading…");
+    await expect.poll(() => accessibleNames(page)).toContain("StaticText: LOADING…");
+    expect((await accessibleNames(page)).filter(name => /^button: (Copy link|Shuffle)/.test(name))).toEqual([]);
     await expect(page.locator("#hide-answer").click({ timeout: 1000 })).rejects.toThrow();
     if (replacement) await page.evaluate(hash => { location.hash = hash; }, replacement);
     // In-page links replace the fragment while the solver is still loading.
@@ -296,13 +309,39 @@ for (const [opening, replacement] of [["#digits=1158&ops=asmd&parens=on&mode=puz
     await page.getByRole("link", { name: "The rules" }).click();
     await expect(page).toHaveURL(/#how-it-works$/);
     release();
-    await expect(layout).not.toHaveAttribute("inert");
+    await expect(controls).not.toHaveAttribute("inert");
+    // Chromium updates its accessibility tree asynchronously.
+    await expect.poll(() => accessibleNames(page)).toEqual(expect.arrayContaining(["button: Copy link", "button: Shuffle"]));
     await expect(page.locator("#hide-answer")).toBeChecked();
     await expect(page.locator("#digit-4")).toHaveValue("8");
     await expect(page.locator("#result-status")).toHaveText("Your turn");
     await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
   });
 }
+
+test("a solver that fails to load says so", async ({ page }) => {
+  await page.route("**/src/js/solver.mjs", route => route.abort());
+  await page.goto("/");
+  await expect(page.locator("#result-status")).toHaveText("Couldn’t load");
+  await expect(page.locator("#expression")).toHaveText("The solver didn’t load. Check your connection and reload the page.");
+  await expect.poll(() => accessibleNames(page)).toContain("StaticText: The solver didn’t load. Check your connection and reload the page.");
+  await expect(page.locator(".puzzle-inputs")).toHaveAttribute("inert", "");
+});
+
+test("a later script error does not replace a working result", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  // Same-origin, so the page's CSP allows it; the file does not exist. The window listener
+  // runs in the capture phase, before this script's own error handler resolves.
+  await page.evaluate(() => new Promise(resolve => {
+    const script = document.createElement("script");
+    script.src = "/missing.js";
+    script.addEventListener("error", resolve);
+    document.head.append(script);
+  }));
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  await expect(page.locator("#expression")).toHaveText("5 + 5 + 5 − 5");
+});
 
 test("all solutions open on request, follow changes, and stay hidden in puzzle mode", async ({ page }) => {
   await page.goto("/#digits=1234&ops=a&parens=on");
