@@ -103,3 +103,79 @@ test("screen readers hear one summary after the digits settle", async ({ page })
   await page.clock.runFor(600);
   await expect(status).toHaveText("Check your inputs. No defined result. Every expression with these settings divides by zero. Try another operation.");
 });
+
+test("a shared link restores the puzzle and the address follows changes", async ({ page }) => {
+  await page.goto("/#digits=1158&ops=asd&parens=on");
+  for (const [index, digit] of [1, 1, 5, 8].entries()) await expect(page.locator(`#digit-${index + 1}`)).toHaveValue(String(digit));
+  await expect(page.getByRole("checkbox", { name: "Allow multiplication" })).not.toBeChecked();
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  await expect(page.locator("#expression")).not.toContainText("×");
+
+  await page.locator("#digit-4").press("ArrowUp");
+  await page.getByRole("checkbox", { name: "Allow parentheses" }).uncheck();
+  await expect(page).toHaveURL(/#digits=1159&ops=asd&parens=off$/);
+  const expression = await page.locator("#expression").textContent();
+  await page.reload();
+  await expect(page.locator("#digit-4")).toHaveValue("9");
+  await expect(page.getByRole("checkbox", { name: "Allow parentheses" })).not.toBeChecked();
+  await expect(page.locator("#expression")).toHaveText(expression);
+
+  // In-page links scroll as usual but keep the puzzle in the address.
+  for (const name of [/Let’s solve it/, "The rules", /Back to top/]) {
+    await page.getByRole("link", { name }).click();
+    await expect(page).toHaveURL(/#digits=1159&ops=asd&parens=off$/);
+  }
+  await page.locator(".skip-link").focus();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/#digits=1159&ops=asd&parens=off$/);
+  await expect(page.locator("#digit-4")).toHaveValue("9");
+});
+
+test("malformed or partial links use the defaults, not the previous puzzle", async ({ page }) => {
+  const defaults = async () => {
+    for (const input of await page.locator(".digit-input").all()) await expect(input).toHaveValue("5");
+    for (const name of ["addition", "subtraction", "multiplication", "division", "parentheses"]) {
+      await expect(page.getByRole("checkbox", { name: `Allow ${name}` })).toBeChecked();
+    }
+  };
+  await page.goto("/#digits=12x4&ops=zz&parens=on");
+  await defaults();
+  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  await page.evaluate(() => { location.hash = "digits=1158&ops=a&parens=off"; });
+  await expect(page.locator("#digit-4")).toHaveValue("8");
+  await page.evaluate(() => { location.hash = "digits=12&ops=zz&parens=?"; });
+  await defaults();
+  await page.evaluate(() => { location.hash = "digits=2468"; });
+  await expect(page.locator("#digit-4")).toHaveValue("8");
+  await expect(page.getByRole("checkbox", { name: "Allow division" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Allow parentheses" })).toBeChecked();
+});
+
+test("Copy link copies the current puzzle and its feedback is not overwritten", async ({ page, context, baseURL }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: baseURL });
+  await page.clock.install({ time: new Date("2026-01-01T08:00:00") });
+  await page.goto("/");
+  await page.clock.pauseAt(new Date("2026-01-01T09:00:00"));
+  const status = page.getByRole("status");
+  const copied = new URL("/#digits=7555&ops=asm&parens=on", baseURL).href;
+  await page.locator("#digit-1").fill("7");
+  await page.getByRole("checkbox", { name: "Allow division" }).uncheck();
+  // Copied before the edits settle: the link, and now the address, show the current puzzle.
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.getByRole("button", { name: "Link copied" })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
+  await expect(page).toHaveURL(copied);
+  await page.clock.runFor(1000);
+  await expect(status).toHaveText("Link to this puzzle copied.");
+  await page.clock.runFor(1000);
+  await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
+
+  // An incomplete puzzle is neither copied nor written to the address.
+  await page.locator("#digit-1").fill("");
+  await page.clock.runFor(1000);
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(page.getByRole("button", { name: "Check the digits" })).toBeVisible();
+  await expect(status).toHaveText("Choose four digits from 0 to 9 before copying a link.");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
+  await expect(page).toHaveURL(copied);
+});
