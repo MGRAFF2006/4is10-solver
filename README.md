@@ -46,7 +46,7 @@ The solver prefers a simple expression without parentheses. If necessary, it sea
 
 - `index.html`, `src/css/index.css`: interface and responsive styling.
 - `src/js/index.js`: accessible inputs, dragging, and result display.
-- `src/js/opening.js`: records the address a shared puzzle opened with, before in-page links can replace it during loading.
+- `src/js/opening.js`: remembers the latest shared puzzle in the address while the page loads, before in-page links can replace it.
 - `src/js/solver.mjs`: pure solver shared by the browser and Node tests.
 - `scripts/build.mjs`: copies only public assets to `dist/`.
 - `wrangler.jsonc`, `_headers`: Cloudflare hosting and security headers.

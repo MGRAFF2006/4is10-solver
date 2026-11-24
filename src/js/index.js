@@ -253,8 +253,8 @@ addEventListener("hashchange", () => {
 });
 // The first result is visible on load; announce only changes the visitor makes.
 // If an in-page link replaced a shared puzzle while the page was loading, use the
-// fragment the page opened with and put it back in the address.
-if (!applyHash() && applyHash(document.documentElement.dataset.openingFragment ?? "")) {
+// latest puzzle fragment seen before startup (see opening.js) and put it back.
+if (!applyHash() && applyHash(document.documentElement.dataset.puzzleFragment ?? "")) {
   history.replaceState(null, "", sharedHash);
 }
 const openingHash = puzzleHash();
