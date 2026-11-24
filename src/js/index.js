@@ -59,7 +59,12 @@ function showSolution() {
 
 // The puzzle lives in the address fragment, e.g. #digits=1158&ops=asmd&parens=on,
 // so it never reaches the server and the address bar can always be shared.
+const defaultPuzzle = { digits: "5555", ops: "asmd" };
+let sharedHash = null;
+
+/** The current puzzle as a fragment, or null while a digit is missing. */
 function puzzleHash() {
+  if (!inputs.every(input => input.validity.valid)) return null;
   return `#${new URLSearchParams({
     digits: inputs.map(input => input.value).join(""),
     ops: operatorBoxes.filter(box => box.checked).map(box => operatorCodes[box.value]).join(""),
@@ -67,17 +72,28 @@ function puzzleHash() {
   })}`;
 }
 
+// While a digit is being fixed, the address keeps the last complete puzzle.
+function saveHash() {
+  const hash = puzzleHash();
+  if (!hash) return;
+  sharedHash = hash;
+  history.replaceState(null, "", hash);
+}
+
 /** Apply a shared puzzle from the address fragment. Returns false for other fragments, such as #solver. */
 function applyHash() {
   const params = new URLSearchParams(location.hash.slice(1));
   if (!params.has("digits") && !params.has("ops") && !params.has("parens")) return false;
-  const digits = params.get("digits") ?? "";
-  if (/^[0-9]{4}$/.test(digits)) inputs.forEach((input, index) => { input.value = digits[index]; });
+  // A link describes a whole puzzle: missing or malformed parts use the defaults,
+  // never whatever was on screen before.
+  const digits = params.get("digits");
   const ops = params.get("ops");
-  if (ops !== null && /^[asmd]*$/.test(ops)) {
-    operatorBoxes.forEach(box => { box.checked = ops.includes(operatorCodes[box.value]); });
-  }
-  if (params.has("parens")) parenthesesBox.checked = params.get("parens") !== "off";
+  const validDigits = digits !== null && /^[0-9]{4}$/.test(digits) ? digits : defaultPuzzle.digits;
+  const validOps = ops !== null && /^[asmd]*$/.test(ops) ? ops : defaultPuzzle.ops;
+  inputs.forEach((input, index) => { input.value = validDigits[index]; });
+  operatorBoxes.forEach(box => { box.checked = validOps.includes(operatorCodes[box.value]); });
+  parenthesesBox.checked = params.get("parens") !== "off";
+  sharedHash = puzzleHash();
   return true;
 }
 
@@ -88,7 +104,7 @@ function update() {
   clearTimeout(settleTimer);
   settleTimer = setTimeout(() => {
     announcement.textContent = summary;
-    history.replaceState(null, "", puzzleHash());
+    saveHash();
   }, 600);
 }
 
@@ -150,21 +166,30 @@ document.querySelector("#randomize").addEventListener("click", () => {
 });
 let copyReset;
 copyButton.addEventListener("click", async () => {
-  const link = new URL(puzzleHash(), location.href).href;
+  // Settle now, so the address matches the link and the copy feedback is not replaced
+  // by a pending result summary.
+  clearTimeout(settleTimer);
+  saveHash();
+  const hash = puzzleHash();
   let copied = false;
-  try {
-    await navigator.clipboard.writeText(link);
-    copied = true;
-  } catch {
-    // Clipboard access needs a secure context and permission; the address bar still holds the link.
+  if (hash) {
+    try {
+      await navigator.clipboard.writeText(new URL(hash, location.href).href);
+      copied = true;
+    } catch {
+      // Clipboard access needs a secure context and permission; the address bar holds the same link.
+    }
   }
-  copyButton.textContent = copied ? "Link copied" : "Copy failed";
-  announcement.textContent = copied ? "Link to this puzzle copied." : "Copying failed. The address bar contains the link.";
+  copyButton.textContent = !hash ? "Check the digits" : copied ? "Link copied" : "Copy failed";
+  announcement.textContent = !hash ? "Choose four digits from 0 to 9 before copying a link."
+    : copied ? "Link to this puzzle copied." : "Copying failed. Copy the address from the address bar instead.";
   clearTimeout(copyReset);
   copyReset = setTimeout(() => { copyButton.textContent = "Copy link"; }, 2000);
 });
 addEventListener("hashchange", () => {
   if (applyHash()) update();
+  // In-page links such as #solver have already scrolled; keep the puzzle in the address.
+  else if (sharedHash) history.replaceState(null, "", sharedHash);
 });
 // The first result is visible on load; announce only changes the visitor makes.
 applyHash();
