@@ -179,3 +179,20 @@ test("Copy link copies the current puzzle and its feedback is not overwritten", 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
   await expect(page).toHaveURL(copied);
 });
+
+test("a digit can be dragged right after using its arrow button", async ({ page }) => {
+  await page.goto("/");
+  // The digit is not focused yet, so pressing on it focuses and selects it before the drag.
+  await page.getByRole("button", { name: "Increase first digit" }).focus();
+  await page.keyboard.press("Enter");
+  const digit = page.locator("#digit-1");
+  await expect(digit).toHaveValue("6");
+  const box = await digit.boundingBox();
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y - 64, { steps: 8 });
+  await page.mouse.up();
+  await expect(digit).toHaveValue("8");
+});

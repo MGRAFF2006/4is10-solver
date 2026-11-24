@@ -121,6 +121,9 @@ inputs.forEach(input => {
     });
   });
   input.addEventListener("focus", () => input.select());
+  // Focusing selects the digit, and moving the pointer over selected text would start the
+  // browser's own text drag, which cancels ours. There is nothing to drag out of the field.
+  input.addEventListener("dragstart", event => event.preventDefault());
   input.addEventListener("input", update);
   input.addEventListener("keydown", event => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
