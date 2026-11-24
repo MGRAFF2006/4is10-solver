@@ -38,7 +38,7 @@ On Arch Linux, use an existing Chromium installation instead of downloading a br
 CHROMIUM_PATH=/usr/bin/chromium npm run test:browser
 ```
 
-The solver tests compare the result against an independent subset search for all 715 unordered four-digit combinations. Browser tests cover typing, operation toggles, mouse and touch dragging, keyboard controls, invalid input, layout overflow, security headers, and private file exclusion.
+The solver tests compare the result against an independent subset search for all 715 unordered four-digit combinations. Browser tests cover typing, operation toggles, mouse and touch dragging, keyboard controls, screen-reader announcements, invalid input, layout overflow, security headers, and private file exclusion.
 
 ## Solver
 

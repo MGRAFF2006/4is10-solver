@@ -71,3 +71,25 @@ test("Cloudflare serves security headers and hides repository files", async ({ r
     expect(missing.status()).toBe(404);
   }
 });
+
+test("screen readers hear one summary after the digits settle", async ({ page }) => {
+  await page.goto("/");
+  // A single live region, empty on load, so the result panel's own changes stay silent.
+  await expect(page.locator("[aria-live], [role='status'], [role='alert']")).toHaveCount(1);
+  const status = page.getByRole("status");
+  await expect(status).toHaveText("");
+  await status.evaluate(element => {
+    window.announcements = [];
+    new MutationObserver(() => window.announcements.push(element.textContent))
+      .observe(element, { childList: true, characterData: true, subtree: true });
+  });
+  const digit = page.locator("#digit-1");
+  for (let step = 0; step < 4; step++) await digit.press("ArrowUp");
+  await expect(digit).toHaveValue("9");
+  await expect(status).toHaveText(/^Exact match: .* equals 10\.$/);
+  await expect(status).not.toContainText(/[−×÷]/);
+  await page.waitForTimeout(800);
+  expect(await page.evaluate(() => window.announcements)).toHaveLength(1);
+  await page.getByRole("checkbox", { name: "Allow parentheses" }).uncheck();
+  await expect(status).toHaveText(/^Closest result: .* off by \d/);
+});

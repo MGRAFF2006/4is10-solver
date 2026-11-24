@@ -7,7 +7,20 @@ const status = document.querySelector("#result-status");
 const expression = document.querySelector("#expression");
 const answer = document.querySelector("#answer");
 const note = document.querySelector("#result-note");
+const announcement = document.querySelector("#announcement");
 const formatter = new Intl.NumberFormat("en", { maximumSignificantDigits: 10 });
+const spokenSymbols = { "+": "plus", "−": "minus", "×": "times", "÷": "divided by", "(": "open bracket", ")": "close bracket" };
+let announceTimer;
+
+function spoken(text) {
+  return text.replace(/[+−×÷()]/g, symbol => ` ${spokenSymbols[symbol]} `).replace(/\s+/g, " ").trim();
+}
+
+// Read one short summary once the digits stop changing, instead of every step of a drag.
+function announce(text) {
+  clearTimeout(announceTimer);
+  announceTimer = setTimeout(() => { announcement.textContent = text; }, 600);
+}
 
 function showSolution() {
   inputs.forEach(input => input.setAttribute("aria-invalid", String(!input.validity.valid)));
@@ -24,7 +37,7 @@ function showSolution() {
     note.textContent = valid && operators.length
       ? "Every expression with these settings divides by zero. Try another operation."
       : "Change your settings and we’ll try again.";
-    return;
+    return `Check your inputs. ${expression.textContent}`;
   }
   panel.dataset.state = result.exact ? "exact" : "closest";
   status.textContent = result.exact ? "Exact match" : "Closest result";
@@ -37,8 +50,15 @@ function showSolution() {
     dot.setAttribute("aria-hidden", "true");
     answer.append(dot);
   }
+  const distance = formatter.format(Math.abs(10 - result.value));
   note.textContent = result.exact ? "All four digits. Every one used exactly once."
-    : `No exact ten with these settings. Off by ${formatter.format(Math.abs(10 - result.value))}.`;
+    : `No exact ten with these settings. Off by ${distance}.`;
+  return result.exact ? `Exact match: ${spoken(result.expression)} equals 10.`
+    : `Closest result: ${spoken(result.expression)} equals ${formatter.format(result.value)}, off by ${distance}.`;
+}
+
+function update() {
+  announce(showSolution());
 }
 
 function setDigit(input, value) {
@@ -50,16 +70,16 @@ inputs.forEach(input => {
   card.querySelectorAll(".digit-step").forEach(button => {
     button.addEventListener("click", () => {
       setDigit(input, (Number(input.value) || 0) + Number(button.dataset.step));
-      showSolution();
+      update();
     });
   });
   input.addEventListener("focus", () => input.select());
-  input.addEventListener("input", showSolution);
+  input.addEventListener("input", update);
   input.addEventListener("keydown", event => {
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     setDigit(input, (Number(input.value) || 0) + (event.key === "ArrowUp" ? 1 : -1));
-    showSolution();
+    update();
   });
   let drag = null;
   input.addEventListener("pointerdown", event => {
@@ -75,7 +95,7 @@ inputs.forEach(input => {
     event.preventDefault();
     const previous = input.value;
     setDigit(input, drag.value + steps);
-    if (input.value !== previous) showSolution();
+    if (input.value !== previous) update();
   });
   const endDrag = () => {
     drag = null;
@@ -88,13 +108,14 @@ inputs.forEach(input => {
 
 form.addEventListener("submit", event => {
   event.preventDefault();
-  showSolution();
+  update();
 });
 form.querySelectorAll('input[type="checkbox"]').forEach(input => {
-  input.addEventListener("change", showSolution);
+  input.addEventListener("change", update);
 });
 document.querySelector("#randomize").addEventListener("click", () => {
   inputs.forEach(input => setDigit(input, Math.floor(Math.random() * 10)));
-  showSolution();
+  update();
 });
+// The first result is visible on load; announce only changes the visitor makes.
 showSolution();
