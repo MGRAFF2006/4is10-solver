@@ -98,12 +98,14 @@ function puzzleHash() {
   return `#${params}`;
 }
 
-// While a digit is being fixed, the address keeps the last complete puzzle, but always
-// with the current mode, so it never shares an answer that is meant to stay hidden.
+// While a digit is being fixed, the address keeps the last complete puzzle (the one the
+// page opened with, if nothing was saved since), but always with the current mode, so it
+// never shares an answer that is meant to stay hidden.
 function saveHash() {
   let hash = puzzleHash();
-  if (!hash && sharedHash) {
-    const params = new URLSearchParams(sharedHash.slice(1));
+  const lastComplete = sharedHash ?? openingHash;
+  if (!hash && lastComplete) {
+    const params = new URLSearchParams(lastComplete.slice(1));
     if (hideBox.checked) params.set("mode", "puzzle");
     else params.delete("mode");
     hash = `#${params}`;
@@ -135,8 +137,9 @@ function applyHash() {
 // and save the puzzle in the address (browsers limit how often it may be rewritten).
 function update() {
   const summary = showSolution();
-  // A summary of a now hidden answer must not stay readable until the next one arrives.
-  if (panel.dataset.state === "hidden") announcement.textContent = "";
+  // A spoken answer must not stay readable once the answer is hidden or no longer shown.
+  const spokenAnswer = /^(Exact match|Closest result):/.test(announcement.textContent);
+  if (spokenAnswer && ["hidden", "invalid"].includes(panel.dataset.state)) announcement.textContent = "";
   clearTimeout(settleTimer);
   settleTimer = setTimeout(() => {
     announcement.textContent = summary;
@@ -250,4 +253,5 @@ addEventListener("hashchange", () => {
 });
 // The first result is visible on load; announce only changes the visitor makes.
 applyHash();
+const openingHash = puzzleHash();
 showSolution();

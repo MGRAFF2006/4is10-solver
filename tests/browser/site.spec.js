@@ -250,4 +250,26 @@ test("puzzle mode protects the answer immediately, before changes settle", async
   await expect(status).toHaveText("");
   await page.clock.runFor(600);
   await expect(status).toHaveText("Your turn. Make 10 with 1, 1, 5 and 8.");
+
+  // Copy feedback is not an answer, so asking for a hint leaves it until the hint arrives.
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(status).toHaveText(/^(Link to this puzzle copied|Copying failed)/);
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(status).toHaveText(/^(Link to this puzzle copied|Copying failed)/);
+  await page.clock.runFor(600);
+  await expect(status).toHaveText("Hint: Start with 1 divided by 5.");
+
+  // An invalid edit after revealing clears the spoken answer at once.
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await page.clock.runFor(600);
+  await expect(status).toContainText("equals 10");
+  await page.locator("#digit-2").fill("");
+  await expect(status).toHaveText("");
+});
+
+test("on a fresh page, puzzle mode reaches the address even while a digit is missing", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#digit-1").fill("");
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(page).toHaveURL(/#digits=5555&ops=asmd&parens=on&mode=puzzle$/);
 });
