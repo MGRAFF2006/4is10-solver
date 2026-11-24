@@ -26,6 +26,7 @@ function flatResult(digits, operators) {
   let sum = { n: 0, d: 1 };
   let term = { n: digits[0], d: 1 };
   let sign = "+";
+  let negative = false;
   for (let i = 0; i < operators.length; i++) {
     const next = { n: digits[i + 1], d: 1 };
     if (operators[i] === "*" || operators[i] === "/") {
@@ -33,11 +34,13 @@ function flatResult(digits, operators) {
       if (!term) return null;
     } else {
       sum = combine(sum, term, sign);
+      // Products of digits are never negative, but a running sum can be, e.g. 0 − 1 + 2 + 9.
+      negative ||= sum.n < 0;
       term = next;
       sign = operators[i];
     }
   }
-  return { ...combine(sum, term, sign), parens: 0, negative: false, expression: digits.map((digit, i) =>
+  return { ...combine(sum, term, sign), parens: 0, negative, expression: digits.map((digit, i) =>
     `${i ? ` ${symbols[operators[i - 1]]} ` : ""}${digit}`).join("") };
 }
 
@@ -104,9 +107,10 @@ export function solve(digits, operators = ["+", "-", "*", "/"], parentheses = tr
   for (const order of orders) {
     for (const a of operators) for (const b of operators) for (const c of operators) {
       consider(flatResult(order, [a, b, c]));
-      if (exact()) return finish();
+      if (exact() && !best.negative) return finish();
     }
   }
+  if (exact()) return finish();
   if (parentheses) {
     for (const order of orders) {
       for (const result of groupedResults(order, operators)) {

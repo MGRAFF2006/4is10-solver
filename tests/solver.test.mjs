@@ -69,6 +69,13 @@ test("shows only the parentheses an answer needs and avoids negative steps when 
   assert.equal(result.exact, true);
   assert.equal(result.expression.match(/\(/g).length, 1, result.expression);
   assert.deepEqual(evaluate(result.expression), { value: 10, negative: false });
+  // Without parentheses too: "0 + 2 − 1 + 9" rather than "0 − 1 + 2 + 9", for exact and closest results.
+  for (const [digits, operators, value] of [[[0, 1, 2, 9], ["+", "-"], 10], [[0, 1, 3, 4], ["+", "-", "*"], 11]]) {
+    for (const parentheses of [true, false]) {
+      const { expression } = solve(digits, operators, parentheses);
+      assert.deepEqual(evaluate(expression), { value, negative: false }, expression);
+    }
+  }
 });
 
 test("respects enabled operators and returns the closest finite result", () => {
