@@ -288,4 +288,5 @@ if (!applyHash() && applyHash(document.documentElement.dataset.puzzleFragment ??
 const openingHash = puzzleHash();
 showSolution();
 // The controls stay inert until here, so nothing can change before puzzle mode protects it.
-document.querySelector(".puzzle-layout").inert = false;
+// The result panel stays readable meanwhile and says "Loading…".
+form.querySelectorAll("[inert]").forEach(element => { element.inert = false; });
