@@ -274,19 +274,27 @@ test("on a fresh page, puzzle mode reaches the address even while a digit is mis
   await expect(page).toHaveURL(/#digits=5555&ops=asmd&parens=on&mode=puzzle$/);
 });
 
-test("the puzzle cannot be changed before the script is ready", async ({ page }) => {
+test("the puzzle cannot be changed or lost before the script is ready", async ({ page }) => {
   let release;
   const held = new Promise(resolve => { release = resolve; });
   await page.route("**/src/js/solver.mjs", async route => {
     await held;
     await route.continue();
   });
-  await page.goto("/#digits=1158&ops=asmd&parens=on", { waitUntil: "commit" });
+  await page.goto("/#digits=1158&ops=asmd&parens=on&mode=puzzle", { waitUntil: "commit" });
   const layout = page.locator(".puzzle-layout");
   await expect(layout).toHaveAttribute("inert", "");
+  await expect(page.locator("#result-status")).toHaveText("Loading…");
   await expect(page.locator("#hide-answer").click({ timeout: 1000 })).rejects.toThrow();
+  // In-page links replace the fragment while the solver is still loading.
+  await page.locator(".skip-link").focus();
+  await page.keyboard.press("Enter");
+  await page.getByRole("link", { name: "The rules" }).click();
+  await expect(page).toHaveURL(/#how-it-works$/);
   release();
   await expect(layout).not.toHaveAttribute("inert");
-  await expect(page.locator("#hide-answer")).not.toBeChecked();
-  await expect(page.locator("#result-status")).toHaveText("Exact match");
+  await expect(page.locator("#hide-answer")).toBeChecked();
+  await expect(page.locator("#digit-4")).toHaveValue("8");
+  await expect(page.locator("#result-status")).toHaveText("Your turn");
+  await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
 });

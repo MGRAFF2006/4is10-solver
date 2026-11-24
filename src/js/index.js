@@ -115,9 +115,9 @@ function saveHash() {
   history.replaceState(null, "", hash);
 }
 
-/** Apply a shared puzzle from the address fragment. Returns false for other fragments, such as #solver. */
-function applyHash() {
-  const params = new URLSearchParams(location.hash.slice(1));
+/** Apply a shared puzzle from an address fragment. Returns false for other fragments, such as #solver. */
+function applyHash(fragment = location.hash) {
+  const params = new URLSearchParams(fragment.slice(1));
   if (!["digits", "ops", "parens", "mode"].some(key => params.has(key))) return false;
   // A link describes a whole puzzle: missing or malformed parts use the defaults,
   // never whatever was on screen before.
@@ -252,7 +252,11 @@ addEventListener("hashchange", () => {
   else if (sharedHash) history.replaceState(null, "", sharedHash);
 });
 // The first result is visible on load; announce only changes the visitor makes.
-applyHash();
+// If an in-page link replaced a shared puzzle while the page was loading, use the
+// fragment the page opened with and put it back in the address.
+if (!applyHash() && applyHash(document.documentElement.dataset.openingFragment ?? "")) {
+  history.replaceState(null, "", sharedHash);
+}
 const openingHash = puzzleHash();
 showSolution();
 // The controls stay inert until here, so nothing can change before puzzle mode protects it.
