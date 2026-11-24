@@ -62,22 +62,25 @@ function operand(child, operator, side) {
 
 // Answers that differ only in the order or grouping of terms in a sum, or of factors in a
 // product, are the same solution: "5 + 5 + 5 − 5" and "5 − 5 + 5 + 5" share one key.
-// Subtracting 0 and dividing by 1 count as adding 0 and multiplying by 1.
+// Subtracting a part worth 0 is adding it, and dividing by a part worth 1 is multiplying
+// by it, so "2 × 5 − 0 × 9" and "0 × 9 + 2 × 5" share a key too.
 // Only answers that make ten need a key, so it is worked out on request.
 function canonical(node) {
   if (!node.operator) return { kind: "digit", key: node.expression };
   const { left, right, operator } = node;
   const kind = operator === "+" || operator === "-" ? "sum" : "product";
-  const [same, inverse, identity] = kind === "sum" ? ["+", "-", "0"] : ["*", "/", "1"];
+  const [same, inverse] = kind === "sum" ? ["+", "-"] : ["*", "/"];
   const parts = child => {
     const form = canonical(child);
-    return form.kind === kind ? form.parts : [same + form.key];
+    if (form.kind === kind) return form.parts;
+    const identity = kind === "sum" ? child.n === 0 : child.n === child.d;
+    return [{ sign: same, key: form.key, identity }];
   };
-  const invert = part => (part[0] === same ? inverse : same) + part.slice(1);
+  const invert = part => part.identity ? part : { ...part, sign: part.sign === same ? inverse : same };
   const rightParts = operator === same ? parts(right) : parts(right).map(invert);
-  const all = [...parts(left), ...rightParts]
-    .map(part => part === inverse + identity ? same + identity : part).sort();
-  return { kind, parts: all, key: `${kind}(${all.join(" ")})` };
+  const all = [...parts(left), ...rightParts];
+  const key = `${kind}(${all.map(part => part.sign + part.key).sort().join(" ")})`;
+  return { kind, parts: all, key };
 }
 
 function* groupedResults(digits, operators) {

@@ -323,6 +323,16 @@ test("all solutions open on request, follow changes, and stay hidden in puzzle m
   await page.getByRole("button", { name: "Reveal the answer" }).click();
   await expect(box).toBeVisible();
 
+  // Hiding the answer again removes the opened list from the page, not just from view.
+  await box.getByText("Show all solutions").click();
+  await expect(box.getByRole("listitem").first()).toBeVisible();
+  await page.getByRole("button", { name: "Hide the answer" }).click();
+  await expect(box).toBeHidden();
+  await expect(box.locator("li")).toHaveCount(0);
+  await expect(box).not.toHaveAttribute("open");
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(box.locator("summary")).toHaveText("Show all solutions");
+
   await page.locator("#digit-1").fill("1");
   for (const index of [2, 3, 4]) await page.locator(`#digit-${index}`).fill("1");
   await expect(page.getByRole("button", { name: "Reveal the answer" })).toBeVisible();

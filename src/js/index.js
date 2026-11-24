@@ -42,8 +42,9 @@ function showSolution() {
   const operators = operatorBoxes.filter(box => box.checked).map(box => box.value);
   const valid = inputs.every(input => input.validity.valid);
   const result = valid ? solve(...currentPuzzle()) : null;
-  // Listing every solution would give away a hidden answer.
+  // Listing every solution would give away a hidden answer, so remove it, not just hide it.
   solutionsBox.hidden = !result?.exact || (hideBox.checked && !revealed);
+  if (solutionsBox.hidden) clearSolutions();
   if (!result) {
     panel.dataset.state = "invalid";
     status.textContent = "Check your inputs";
@@ -156,13 +157,17 @@ function update() {
   }, 600);
 }
 
+function clearSolutions() {
+  solutionsBox.open = false;
+  solutionsSummary.textContent = "Show all solutions";
+  solutionsList.replaceChildren();
+}
+
 // A new puzzle or new settings: hide the answer again if the visitor asked for that.
 function changed() {
   hinted = false;
   revealed = false;
-  solutionsBox.open = false;
-  solutionsSummary.textContent = "Show all solutions";
-  solutionsList.replaceChildren();
+  clearSolutions();
   update();
 }
 
@@ -260,7 +265,7 @@ copyButton.addEventListener("click", async () => {
 });
 // Finding every solution takes longer than finding one, so it waits until someone asks.
 solutionsBox.addEventListener("toggle", () => {
-  if (!solutionsBox.open || solutionsList.children.length) return;
+  if (!solutionsBox.open || solutionsBox.hidden || solutionsList.children.length) return;
   const solutions = allSolutions(...currentPuzzle());
   solutionsSummary.textContent = `${solutions.length} distinct ${solutions.length === 1 ? "solution" : "solutions"}`;
   solutionsList.replaceChildren(...solutions.map(text => {

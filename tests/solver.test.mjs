@@ -140,8 +140,12 @@ test("lists each distinct solution once", () => {
   // Reordering and regrouping terms or factors is the same solution.
   assert.deepEqual(allSolutions([1, 2, 3, 4], ["+"]), ["1 + 2 + 3 + 4"]);
   assert.deepEqual(allSolutions([5, 5, 5, 5]), ["5 + 5 + 5 − 5", "5 + 5 × 5 ÷ 5", "5 ÷ 5 × (5 + 5)"]);
-  // Dividing by one is multiplying by one.
+  // Dividing by one is multiplying by one, and subtracting zero is adding zero,
+  // also when the one or zero is worked out: "2 × 5 − 0 × 9" is "0 × 9 + 2 × 5".
   assert.deepEqual(allSolutions([1, 1, 2, 5], ["*", "/"]), ["1 × 1 × 2 × 5"]);
+  assert.deepEqual(allSolutions([0, 2, 5, 9], ["+", "-", "*"]), ["0 × 9 + 2 × 5", "(0 × 9 + 2) × 5", "(0 × 9 + 5) × 2"]);
+  // "(5 + 5) ÷ (2 − 1)" is "(2 − 1) × (5 + 5)".
+  assert.equal(allSolutions([1, 2, 5, 5]).filter(expression => expression.includes("(5 + 5)")).length, 1);
   assert.deepEqual(allSolutions([1, 1, 1, 1]), []);
   assert.deepEqual(allSolutions([5, 5, 5, 5], []), []);
   assert.throws(() => allSolutions([1, 2, 3]), TypeError);
