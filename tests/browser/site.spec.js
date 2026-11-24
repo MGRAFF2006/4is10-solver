@@ -227,3 +227,27 @@ test("a shared puzzle-mode link opens hidden, also when ten is out of reach", as
   await expect(page.locator("#result-status")).toHaveText("Closest result");
   await expect(page.locator("#answer")).toHaveText("4");
 });
+
+test("puzzle mode protects the answer immediately, before changes settle", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-01-01T08:00:00") });
+  await page.goto("/#digits=1158&ops=asmd&parens=on");
+  await page.clock.pauseAt(new Date("2026-01-01T09:00:00"));
+  const status = page.getByRole("status");
+
+  // Turning the mode on puts it in the address at once, and it stays there while a digit is missing.
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
+  await page.locator("#digit-1").fill("");
+  await page.clock.runFor(1000);
+  await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
+  await page.locator("#digit-1").fill("1");
+
+  // Hiding a revealed answer clears its spoken summary at once.
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await page.clock.runFor(600);
+  await expect(status).toContainText("equals 10");
+  await page.getByRole("button", { name: "Hide the answer" }).click();
+  await expect(status).toHaveText("");
+  await page.clock.runFor(600);
+  await expect(status).toHaveText("Your turn. Make 10 with 1, 1, 5 and 8.");
+});

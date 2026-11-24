@@ -98,9 +98,16 @@ function puzzleHash() {
   return `#${params}`;
 }
 
-// While a digit is being fixed, the address keeps the last complete puzzle.
+// While a digit is being fixed, the address keeps the last complete puzzle, but always
+// with the current mode, so it never shares an answer that is meant to stay hidden.
 function saveHash() {
-  const hash = puzzleHash();
+  let hash = puzzleHash();
+  if (!hash && sharedHash) {
+    const params = new URLSearchParams(sharedHash.slice(1));
+    if (hideBox.checked) params.set("mode", "puzzle");
+    else params.delete("mode");
+    hash = `#${params}`;
+  }
   if (!hash) return;
   sharedHash = hash;
   history.replaceState(null, "", hash);
@@ -128,6 +135,8 @@ function applyHash() {
 // and save the puzzle in the address (browsers limit how often it may be rewritten).
 function update() {
   const summary = showSolution();
+  // A summary of a now hidden answer must not stay readable until the next one arrives.
+  if (panel.dataset.state === "hidden") announcement.textContent = "";
   clearTimeout(settleTimer);
   settleTimer = setTimeout(() => {
     announcement.textContent = summary;
@@ -206,6 +215,8 @@ revealButton.addEventListener("click", () => {
 form.querySelectorAll('input[type="checkbox"]').forEach(input => {
   input.addEventListener("change", changed);
 });
+// Save the mode right away: an address copied in the next 600 ms must not reveal the answer.
+hideBox.addEventListener("change", saveHash);
 document.querySelector("#randomize").addEventListener("click", () => {
   inputs.forEach(input => setDigit(input, Math.floor(Math.random() * 10)));
   changed();
