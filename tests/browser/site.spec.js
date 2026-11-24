@@ -179,3 +179,127 @@ test("Copy link copies the current puzzle and its feedback is not overwritten", 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(copied);
   await expect(page).toHaveURL(copied);
 });
+
+test("puzzle mode hides the answer until a hint or reveal is asked for", async ({ page }) => {
+  await page.goto("/");
+  const status = page.locator("#result-status");
+  const expression = page.locator("#expression");
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(status).toHaveText("Your turn");
+  await expect(expression).toHaveText("Make 10 with 5, 5, 5 and 5.");
+  await expect(page.locator("#answer")).toHaveText("?");
+  await expect(page.locator(".result-panel")).not.toContainText("5 + 5 + 5 − 5");
+  await expect(page.getByRole("status")).toHaveText("Your turn. Make 10 with 5, 5, 5 and 5.");
+  await expect(page).toHaveURL(/#digits=5555&ops=asmd&parens=on&mode=puzzle$/);
+
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(status).toHaveText("Hint");
+  await expect(expression).toHaveText("Start with 5 + 5.");
+  await expect(page.getByRole("button", { name: "Show a hint" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Reveal the answer" })).toBeFocused();
+  await expect(page.getByRole("status")).toHaveText("Hint: Start with 5 plus 5.");
+
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(status).toHaveText("Exact match");
+  await expect(expression).toHaveText("5 + 5 + 5 − 5");
+  await page.getByRole("button", { name: "Hide the answer" }).click();
+  await expect(status).toHaveText("Hint");
+
+  // A new puzzle starts hidden again, without the earlier hint; "Find a solution" reveals it.
+  await page.locator("#digit-1").press("ArrowDown");
+  await expect(status).toHaveText("Your turn");
+  await expect(page.getByRole("button", { name: "Show a hint" })).toBeVisible();
+  await page.getByRole("button", { name: "Find a solution" }).click();
+  await expect(status).toHaveText("Exact match");
+
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).uncheck();
+  await expect(page.locator("#puzzle-actions")).toBeHidden();
+  await expect(page).toHaveURL(/#digits=4555&ops=asmd&parens=on$/);
+});
+
+test("a shared puzzle-mode link opens hidden, also when ten is out of reach", async ({ page }) => {
+  await page.goto("/#digits=1111&ops=asmd&parens=on&mode=puzzle");
+  await expect(page.getByRole("checkbox", { name: "Hide the answer until I ask" })).toBeChecked();
+  await expect(page.locator("#result-status")).toHaveText("Your turn");
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(page.locator("#expression")).toHaveText("Ten isn’t reachable with these settings. Get as close as you can.");
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await expect(page.locator("#result-status")).toHaveText("Closest result");
+  await expect(page.locator("#answer")).toHaveText("4");
+});
+
+test("puzzle mode protects the answer immediately, before changes settle", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-01-01T08:00:00") });
+  await page.goto("/#digits=1158&ops=asmd&parens=on");
+  await page.clock.pauseAt(new Date("2026-01-01T09:00:00"));
+  const status = page.getByRole("status");
+
+  // Turning the mode on puts it in the address at once, and it stays there while a digit is missing.
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
+  await page.locator("#digit-1").fill("");
+  await page.clock.runFor(1000);
+  await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
+  await page.locator("#digit-1").fill("1");
+
+  // Hiding a revealed answer clears its spoken summary at once.
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await page.clock.runFor(600);
+  await expect(status).toContainText("equals 10");
+  await page.getByRole("button", { name: "Hide the answer" }).click();
+  await expect(status).toHaveText("");
+  await page.clock.runFor(600);
+  await expect(status).toHaveText("Your turn. Make 10 with 1, 1, 5 and 8.");
+
+  // Copy feedback is not an answer, so asking for a hint leaves it until the hint arrives.
+  await page.getByRole("button", { name: "Copy link" }).click();
+  await expect(status).toHaveText(/^(Link to this puzzle copied|Copying failed)/);
+  await page.getByRole("button", { name: "Show a hint" }).click();
+  await expect(status).toHaveText(/^(Link to this puzzle copied|Copying failed)/);
+  await page.clock.runFor(600);
+  await expect(status).toHaveText("Hint: Start with 1 divided by 5.");
+
+  // An invalid edit after revealing clears the spoken answer at once.
+  await page.getByRole("button", { name: "Reveal the answer" }).click();
+  await page.clock.runFor(600);
+  await expect(status).toContainText("equals 10");
+  await page.locator("#digit-2").fill("");
+  await expect(status).toHaveText("");
+});
+
+test("on a fresh page, puzzle mode reaches the address even while a digit is missing", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("#digit-1").fill("");
+  await page.getByRole("checkbox", { name: "Hide the answer until I ask" }).check();
+  await expect(page).toHaveURL(/#digits=5555&ops=asmd&parens=on&mode=puzzle$/);
+});
+
+// The second case replaces the opening puzzle in the same tab before following the links.
+for (const [opening, replacement] of [["#digits=1158&ops=asmd&parens=on&mode=puzzle", null],
+  ["#digits=2468&ops=asmd&parens=on", "digits=1158&ops=asmd&parens=on&mode=puzzle"]]) {
+  test(`the puzzle cannot be changed or lost before the script is ready (${replacement ? "replaced" : "opened"})`, async ({ page }) => {
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    await page.route("**/src/js/solver.mjs", async route => {
+      await held;
+      await route.continue();
+    });
+    await page.goto(`/${opening}`, { waitUntil: "commit" });
+    const layout = page.locator(".puzzle-layout");
+    await expect(layout).toHaveAttribute("inert", "");
+    await expect(page.locator("#result-status")).toHaveText("Loading…");
+    await expect(page.locator("#hide-answer").click({ timeout: 1000 })).rejects.toThrow();
+    if (replacement) await page.evaluate(hash => { location.hash = hash; }, replacement);
+    // In-page links replace the fragment while the solver is still loading.
+    await page.locator(".skip-link").focus();
+    await page.keyboard.press("Enter");
+    await page.getByRole("link", { name: "The rules" }).click();
+    await expect(page).toHaveURL(/#how-it-works$/);
+    release();
+    await expect(layout).not.toHaveAttribute("inert");
+    await expect(page.locator("#hide-answer")).toBeChecked();
+    await expect(page.locator("#digit-4")).toHaveValue("8");
+    await expect(page.locator("#result-status")).toHaveText("Your turn");
+    await expect(page).toHaveURL(/#digits=1158&ops=asmd&parens=on&mode=puzzle$/);
+  });
+}

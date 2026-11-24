@@ -70,6 +70,13 @@ h1 > span { color: var(--muted); }
 .operator input:focus-visible + span { outline: 2px solid var(--white); outline-offset: 4px; }
 .parentheses { margin-left: 10px; }
 .parentheses > span { font-size: 20px; }
+.hide-answer { display: flex; align-items: center; gap: 12px; width: fit-content; margin: -6px 0 24px; font-size: 12px; color: var(--muted); cursor: pointer; }
+.hide-answer input { appearance: none; display: grid; place-content: center; flex-shrink: 0; width: 18px; height: 18px; margin: 0; border: 1px solid #666; border-radius: 2px; cursor: pointer; }
+.hide-answer:hover input { border-color: var(--white); }
+.hide-answer input:checked { background: var(--white); border-color: var(--white); }
+.hide-answer input:checked::after { content: ""; width: 9px; height: 5px; border: solid #111; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
+.puzzle-actions { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-bottom: 18px; }
+.puzzle-actions[hidden] { display: none; }
 .solve-button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; background: var(--white); color: #111; border: 1px solid var(--white); font-size: 14px; font-weight: 600; border-radius: 2px; transition: background .15s; }
 .solve-button:hover { background: #ccc; }
 .solve-button span { font-size: 21px; line-height: 1; }
@@ -142,4 +149,5 @@ h1 > span { color: var(--muted); }
   .site-footer { flex-wrap: wrap; gap: 12px; padding: 22px 0; }
   .site-footer p:nth-child(2) { order: 3; width: 100%; }
 }
+@media (forced-colors: active) { .hide-answer input { appearance: auto; } .hide-answer input:checked::after { content: none; } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
